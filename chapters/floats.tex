@@ -6,18 +6,18 @@
 
 \subsection{可重入 (Reentrancy)漏洞}
 
-可重入漏洞是智能合约中最负盛名的漏洞。这个漏洞源于Solidity语言上的一个特殊机制，像JavaScript等语言一样，Solidity语言有回调（Fallback）函数。每个合约仅能有一个回调函数，并且这种函数没有参数，没有函数名，也不会返回任何的返回值。根据Solidity的开发文档，这种函数只会在以下两种情况被触发：当合约收到函数调用但却没有符合的函数签名（函数的唯一标识符）时；当合约接收到任何数量的以太币，即发生交易时。前一种情况极少出现，而可重入攻击抓住的就是后面的那种情况。如果一个黑客妄图发动可重入攻击，他需要做的就是在自己的合约中编写一段恶意的回调函数，从而利用回调函数的特性反复记性转账操作，达到窃取以太币的目的。另一方面来说，如果被回调函数调用的函数中不包含转账语句，可重入漏洞也可利用重复调用，来造成拒绝服务（DoS）攻击。因为在以太坊的体系中，每个合约都有一定的gas限制，gas会在合约的每一次调用、任何操作中消耗掉。如果重复调用一个函数，会不断消耗被调用函数所在合约的gas，待gas耗尽，合约不能提供任何的服务，也就达到了拒绝服务攻击的目的。在2016年，黑客借助可重入漏洞对DAO合约发动攻击，共盗取了价值数百万美元的以太币。
+可重入漏洞是智能合约中最负盛名的漏洞。这个漏洞源于Solidity语言上的一个特殊机制，像JavaScript等语言一样，Solidity语言有回调（Fallback）函数。每个合约仅能有一个回调函数，并且这种函数没有参数，没有函数名，也不会返回任何的返回值。根据Solidity的开发文档，这种函数只会在以下两种情况被触发：当合约收到函数调用但却没有符合的函数签名（函数的唯一标识符）时；当合约接收到任何数量的以太币，即发生交易时。前一种情况极少出现，而可重入攻击抓住的就是后面的那种情况。如果一个黑客妄图发动可重入攻击，他需要做的就是在自己的合约中编写一段恶意的回调函数，从而利用回调函数的特性反复记性转账操作，达到窃取以太币的目的。另一方面来说，如果被回调函数调用的函数中不包含转账语句，可重入漏洞也可利用重复调用，来造成拒绝服务（Denial of Service）攻击。因为在以太坊的体系中，每个合约都有一定的gas限制，gas会在合约的每一次调用、任何操作中消耗掉。如果重复调用一个函数，会不断消耗被调用函数所在合约的gas，待gas耗尽，合约不能提供任何的服务，也就达到了拒绝服务攻击的目的。在2016年，黑客借助可重入漏洞对DAO合约发动攻击，共盗取了价值数百万美元的以太币。
 
 可重入漏洞在智能合约的漏洞中算是比较灵活的漏洞，其发动攻击的方式灵活多变，目前主要的防范方式是对函数调用者的身份进行检验，新版的Solidity编译器也对有可重入风险的函数做出了提醒，但是仍有很多已经部署在以太坊平台上的合约存在可重入的风险，因此我们很重视可重入漏洞攻击模式的的分析，并会在之后的技术开发阶段对这种漏洞进行针对性的改进。
 
 \subsection{意外异常 (Unexpected Revert)漏洞}
 
-意外异常漏洞是由于EVM的异常处理机制引起的一种拒绝服务 (Denial of Service) 攻击。这种漏洞多出现于在for循环中进行的批量转账操作中。产生该漏洞的主要原因是，开发者使用\codeff{require}或者\codeff{assert}去检查写于\codeff{for}循环内的转账外部调用。如果其中一次转账发生错误，\codeff{require}函数将抛出异常，并终止整个交易过程，这将导致后面的地址无法正常进行转账业务。更进一步说，如果这样的转账错误是攻击者蓄意为之，那么这个意外异常漏洞就给了攻击者一个停止当前服务的机会。Solidity研发团队不推荐也不建议开发者们用循环进行任何的转账业务。
+意外异常漏洞是由于EVM的异常处理机制引起的一种拒绝服务 (Denial of Service) 攻击。这种漏洞多出现于在for循环中进行的批量转账操作中。产生该漏洞的主要原因是，开发者使用\codeff{require}或者\codeff{assert}去检查写于\codeff{for}循环内的转账外部调用。如果其中一次转账发生错误，\codeff{require}函数将抛出异常，并终止整个交易过程，这将导致后面的地址无法正常进行转账业务。更进一步说，如果这样的转账错误是攻击者蓄意为之，那么这个意外异常漏洞就给了攻击者一个停止当前服务的机会。Solidity研发团队不推荐也不建议开发者们在循环中进行任何的转账业务。
 
-如下图2-1代码所示，在第5行，函数试图向\codeff{refundAddress}中存放的地址发送\codeff{ether}。该函数使用\codeff{send}函数，通过不断循环进行转账。同时，该函数也针对\codeff{send}函数用\codeff{require}进行了返回值检查。如果\codeff{refundAddress}中的任何一个地址发生转账错误，则该函数将停止运行，剩下的合约地址也没法正常进行转账业务。
-\small
+如下图\ref{fig:revert_vul}代码所示，在第5行，函数试图向\codeff{refundAddress}中存放的地址发送\codeff{ether}。该函数使用\codeff{send}函数，通过不断循环进行转账。同时，该函数也针对\codeff{send}函数用\codeff{require}进行了返回值检查。如果\codeff{refundAddress}中的任何一个地址发生转账错误，则该函数将停止运行，剩下的合约地址也没法正常进行转账业务。
+
 \begin{figure}
-\begin{minipage}[htbp]{1.0\linewidth}
+\begin{minipage}[htb]{1.0\linewidth}
     \begin{lstlisting}
     address[] private refundAddresses;
     mapping (address => uint) public refunds;
@@ -31,8 +31,9 @@
 \end{minipage}
 \vspace{-5mm}
 \caption{意外异常调用漏洞示例代码}
+\label{fig:revert_vul}
 \end{figure}
-\normalsize
+
 
 \subsection{低级调用 (Unchecked Low-Level-Call)漏洞}
 
@@ -40,7 +41,27 @@
 
 \subsection{自毁 (Suicidal)漏洞}
 
-\textcolor{red}{TODO: Add text}
+Solidity提供内建的自毁函数\codeff{selfdestruct()}，这个函数需要输入一个地址类型的参数，任何调用这个函数的合约将停止当前合约功能，并把当前合约所有的余额转移到这个参数的地址。相比直接使用\codeff{send}函数进行余额转移，使用\codeff{selfdestruct}消耗的gas\footnote{以太坊上的每条指令都有的特定属性，表示这条指令消耗的资源多少，gas为0则停止任何服务}更少。
+
+自毁函数给智能合约提供了方便的功能，但在实际的使用中，如果自毁函数没有被很好的限制，或对调用者的身份进行严格检查，就能造成漏洞攻击。如下面\ref{fig:suicidal_vul}代码所示，\codeff{suicidal}函数实现了简单的自毁函数功能，并通过传参来确定转移余额的目标地址。可是，函数的访问是公开的，任何一个访问该合约的用户都能调用这个自毁函数，并把自己的攻击地址作为余额的转账地址，造成自毁漏洞攻击。Solidity研发团队在开发文档中提醒开发者要限制自毁函数的调用，并对调用者进行身份检查。
+
+\begin{figure}
+\begin{minipage}[htb]{1.0\linewidth}
+    \begin{lstlisting}
+    contract gamble{
+        ...
+        public suicidal(address target) public {
+            selfdestruct(target);
+        }
+    }
+    \end{lstlisting}
+    %\caption{test}
+\end{minipage}
+\vspace{-5mm}
+\caption{自毁漏洞示例代码}
+\label{fig:suicidal_vul}
+\end{figure}
+
 
 \section{前沿智能合约分析工具}
 
@@ -48,22 +69,40 @@
 
 \subsubsection{传统静态分析工具}
 
-静态分析是借助程序的中间语言（IR）、抽象语法树（AST）、控制流图（CFG）等等工具去分析程序特点的分析方法。静态分析方法的主要特点是覆盖率高（即能保证覆盖程序的尽可能多的执行路径），但准确率低。现有的静态分析工具代表如Slither，他的分析路径如下图4-1所示：\textcolor{red}{Add figure}
+传统静态分析是借助程序的中间语言（IR）、抽象语法树（AST）、控制流图（CFG）等等工具去分析程序特点的分析方法。静态分析方法的主要特点是覆盖率高（即能保证覆盖程序的尽可能多的执行路径），但准确率低。现有的传统静态分析工具代表如Slither，他的分析路径如下图\ref{fig:slither_proccess}所示：
 
-以源代码作为输入，Slither首先借助Solidity编译器将源代码经过编译，获取了程序的抽象语法树，再在AST上通过聚合、规则匹配的方式生成Slith IR和CFG。由于Solidity编译器生成了结构性强的AST，为分析提供了方便，故Slither能够在AST上如此顺利地实现IR和CFG的转换。其中，Slith IR是\textsc{Slither}的开发团队设计的一款中间语言，对源代码的常见操作做了不同程度的抽象。在以上所有步骤都完成之后，\textsc{Slither}再借助不同的探测器对生成的CFG进行探测。探测器中是\textsc{Slither}预先设定好的探测规则，如果在分析过程中发现和探测规则吻合的程序片段，探测器就会报告这个程序片段存在漏洞。故严格意义上来说，\textsc{Slither}是一款基于规则的漏洞检测软件。一方面来说，基于规则的设定提升了\textsc{Slither}的检测速度，也保证了它的可扩展性；另一方面，如果规则的制订不够合理，或者规则的分析程度不能做到抽象性和准确性的平衡，基于规则的检测方法就会带来很高的假正确率（False Positive Rate）。例如，\textsc{Slither}中针对可重入漏洞的检测规则如下图4-2所示：
+\begin{figure}[h]
+\vspace{+2mm}
+  \centering
+  \includegraphics[width=0.55\textwidth]{figures/slither_process.png}
+  \caption{\textsc{Slither}系统流程图}
+  \vspace{-5mm}
+  \label{fig:slither_proccess}
+\end{figure}
+
+以源代码作为输入，\textsc{Slither}首先借助Solidity编译器将源代码经过编译，获取了程序的抽象语法树，再在AST上通过聚合、规则匹配的方式生成Slith中间语言（Intermediate Representation）和控制流图（Control Flow Graph）。由于Solidity编译器生成了结构性强的抽象语法树（Abstract Syntax Tree），为分析提供了方便，故Slither能够在AST上如此顺利地实现IR和CFG的转换。其中，Slith IR是\textsc{Slither}的开发团队设计的一款中间语言，对源代码的常见操作做了不同程度的抽象。在以上所有步骤都完成之后，\textsc{Slither}再借助不同的探测器对生成的CFG进行探测。探测器中是\textsc{Slither}预先设定好的探测规则，如果在分析过程中发现和探测规则吻合的程序片段，探测器就会报告这个程序片段存在漏洞。故严格意义上来说，\textsc{Slither}是一款基于规则的漏洞检测软件。一方面来说，基于规则的设定提升了\textsc{Slither}的检测速度，也保证了它的可扩展性；另一方面，如果规则的制订不够合理，或者规则的分析程度不能做到抽象性和准确性的平衡，基于规则的检测方法就会带来很高的假正确率（False Positive Rate）。例如，\textsc{Slither}中针对可重入漏洞的检测规则如下图4-2所示：\textcolor{red}{TODO: add figure}
 
 在这个检测规则中，检测器逐一扫描CFG中的各个代码块，如果规则符合，就会报告漏洞。可重入漏洞的规则主要由三部分组成，其中任何一个条件不满足，都会被判断为清白的代码块，这三个条件包括：是否有对全局变量的读取操作、是否涉及交易过程、是否有对全局变量的写入操作。这个规则对可重入漏洞中的某一类型做出了准确地判断，但对其他新型变种可重入攻击，这个规则显得不够灵活。规则的修订过程是无止境的，基于规则的探测器不能保证漏洞检测的鲁棒性。
 
 
 \subsubsection{符号执行分析工具}
 
-动态分析工具主要有两种，一种是利用约束求解器进行符号执行，分析约束求解器的返回值；另一种是生成测试用例输入程序中，分析程序的输出。后者和模糊测试有相似的地方，但是这种测试并没有考虑对程序的攻击面进行针对性的调整测试用例。无论工具采用了哪种动态分析方法，都有着强烈的动态分析特点，耗时较长但精确率高。其中，以Oyente为例，Oyente的分析过程如下图4-3所示：\textcolor{red}{Add figure}
+符号执行分析工具主要将变量用符号进行标识，并利用约束求解器进行求解，来达到测试软件的墓地。符号执行工具没有像动态分析工具那样使用真实的用例观察软件的运行情况，而是利用约束求解技术或者其他技术代替真实值执行。在智能合约领域，代表的符号执行分析工具有\textsc{Oyente}，\textsc{Oyente}的分析过程如下图\ref{fig:oyente_process}所示：
 
-Oyente的输入为源代码，再借助Solidity编译器生成AST，进而生成CFG，再在CFG的基础上用Z3约束求解器进行符号执行，最后分析约束求解器的返回值并根据输出报告。Oyente的探测器在分析约束求解器的结果时，也用了基于规则的方法，如果约束求解器的结果和规则相符，则证明这个程序片段是有可能存在漏洞的。在执行流程的最后还有个验证器负责减少程序的误判。
+\begin{figure}
+\vspace{+2mm}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/oyente_process.png}
+  \caption{\textsc{Oyente}系统流程图}
+  \label{fig:oyente_process}
+\vspace{-5mm}
+\end{figure}
 
-作为典型的动态分析工具，Oyente充分体现了动态分析工具的特点，它在同样的数据集上花费了近十倍于Slither的分析时间，耗时较长。遗憾的是，Oyente的结果并不是很好，输出的结果有很高的假正确率，我们推测是由于规则设置的不合理导致的。但不可否认的是，Oyente作为动态分析工具，能够分析一些静态分析工具无法分析的漏洞，比如整数的上溢、下溢，栈溢出等等，这些漏洞无法通过静态分析工具得出，只有通过动态分析工具检测。
+\textsc{Oyente}的输入为源代码，再借助Solidity编译器生成AST，进而生成CFG，再在CFG的基础上用Z3约束求解器进行符号执行，最后分析约束求解器的返回值并根据输出报告。\textsc{Oyente}的探测器在分析约束求解器的结果时，也用了基于规则的方法，如果约束求解器的结果和规则相符，则证明这个程序片段是有可能存在漏洞的。在执行流程的最后还有个验证器负责减少程序的误判。
 
-其他的动态分析工具如Manticore、Mythril等等，有的因为开发团队的不作为，导致分析程序无法正常运行；有的不仅耗时更长，无法完全检测数据集上的所有文件，输出的报告也是复杂无比。因此我们为了实验的顺利进行，我们选用Oyente作为动态分析软件的代表。
+作为典型的符号执行分析工具，\textsc{Oyente}充分体现了他的特点，它在同样的数据集上花费了近十倍于\textsc{Slither}的分析时间，耗时较长。遗憾的是，\textsc{Oyente}的结果并不是很好，输出的结果有很高的假正确率，我们推测是由于规则设置的不合理导致的。但不可否认的是，\textsc{Oyente}作为静态分析工具，能够分析一些传统静态分析工具无法分析的漏洞，比如整数的上溢、下溢，栈溢出等等，这些漏洞无法通过传统分析方法得出。
+
+其他的动态分析工具如\textsc{Manticore}，也采用了符号执行分析技术，这种技术带来了更高的精确度的同时也容易引入更差的性能表现。
 
 \subsection{动态分析工具}
 
@@ -82,77 +121,3 @@ Oyente的输入为源代码，再借助Solidity编译器生成AST，进而生成
 运行时函数包括了源代码的主体部分，体量也比构造函数大不少。在运行时函数的开始部分，会先重置内存指针、支付检查，随后会将调用的函数名称传入函数选择器。函数选择器中存放了源代码中各个函数的函数签名，将传入的函数名称经过hash和函数签名进行比对，就可以得到各个函数在内存中的位置。在获取函数位置之后，并不能马上直接运行函数主体，EVM会先运行函数包装器（Function Wrapper）中的内容。包装器的主要功能包括保管函数入口地址、清理内存、接受函数返回值等等，它的存在保证了函数的正常稳定运行。在包装器准备好之后，才会进入函数的主体部分。主体部分包括了源代码中的绝大部分内容，故在反编译过程中，如果我们能跳过函数选择器和函数包装器，直接找到函数的主体部分，将会大大减少我们的分析代码量。
 
 此时汇编码还没有结束，在汇编码的最后部分是大量的无效代码，这部分的十六进制代码无法和对应表中的任何操作联系起来。事实上，这部分的代码并不是真的无效代码，这部分的代码称为元数据hash（Metadata Hash）。根据黄皮书介绍，每个合约部署在区块上时，会根据合约的信息（函数签名、构造器参数、函数数量等等）生成一个hash值，每个合约的hash值都是唯一的，这个hash值称之为元数据hash，放在运行时函数的最后部分，作为合约的指纹小心存放。在构造函数和运行时函数中并不会有任何的函数调用会涉及这一部分的代码，它们仅作为合约的唯一代码在部署时被使用。
-
-\section{三线表}
-
-三线表是《撰写手册》推荐使用的格式，如表~\ref{tab:exampletable}。
-\begin{table}[htb]
-  \centering\small
-  \caption{表号和表题在表的正上方}
-  \label{tab:exampletable}
-  \begin{tabular}{cl}
-    \toprule
-    类型   & 描述                                       \\
-    \midrule
-    挂线表 & 挂线表也称系统表、组织表，用于表现系统结构 \\
-    无线表 & 无线表一般用于设备配置单、技术参数列表等   \\
-    卡线表 & 卡线表有完全表，不完全表和三线表三种       \\
-    \bottomrule
-  \end{tabular}
-  \note{注：表注分两种，第一种是对全表的注释，用不加阿拉伯数字排在表的下边，
-    前面加“注：”；第二种是和表内的某处文字或数字相呼应的注，
-    在表里面用带圈的阿拉伯数字在右上角标出，然后在表下面用同样的圈码注出来}
-\end{table}
-
-编制表格应简单明了，表达一致，明晰易懂，表文呼应、内容一致。
-排版时表格字号略小，或变换字体，尽量不分页，尽量不跨节。
-表格太大需要转页是，需要在续表上方注明“续表”，表头页应重复排出。
-
-
-
-\section{插图}
-
-有的同学可能听说“\LaTeX{} 只能使用 eps 格式的图片”，甚至把 jpg 格式转为 eps。
-事实上，这种做法已经过时。
-而且每次编译时都要要调用外部工具解析 eps，导致降低编译速度。
-所以我们推荐矢量图直接使用 pdf 格式，位图使用 jpeg 或 png 格式。
-\begin{figure}[htb]
-  \centering
-  \includegraphics[width=0.3\textwidth]{ustc_logo_fig.pdf}
-  \caption{图号、图题置于图的下方}
-  \label{fig:logo}
-  \note{注：图注的内容不宜放到图题中。}
-\end{figure}
-
-关于图片的并排，推荐使用较新的 \pkg{subcaption} 宏包，
-不建议使用 \pkg{subfigure} 或 \pkg{subfig} 等宏包。
-
-
-
-\section{算法环境}
-
-模板中使用 \pkg{algorithm2e} 宏包实现算法环境。关于该宏包的具体用法，
-请阅读宏包的官方文档。
-
-\begin{algorithm}[htb]
-  \small
-  \SetAlgoLined
-  \KwData{this text}
-  \KwResult{how to write algorithm with \LaTeX2e }
-
-  initialization\;
-  \While{not at end of this document}{
-    read current\;
-    \eIf{understand}{
-      go to next section\;
-      current section becomes this one\;
-    }{
-      go back to the beginning of current section\;
-    }
-  }
-  \caption{算法示例1}
-  \label{algo:algorithm1}
-\end{algorithm}
-
-注意，我们可以在论文中插入算法，但是插入大段的代码是愚蠢的。
-然而这并不妨碍有的同学选择这么做，对于这些同学，建议用 \pkg{listings} 宏包。
