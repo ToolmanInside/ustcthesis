@@ -34,9 +34,51 @@
 \usepackage{longtable}
 \usepackage[ruled,linesnumbered]{algorithm2e}
 \usepackage{siunitx}
+\usepackage{listings}
+\usepackage{color}
 \usepackage{amsthm}
+\usepackage{caption}
 \usepackage{hyperref}
 \usepackage{url}
+\usepackage{float}
+\usepackage{subfigure}
+\usepackage{xcolor}
+\usepackage{graphicx}
+
+
+\lstdefinelanguage{JavaScript}{
+ keywords={typeof, new, true, false, catch, function, return, null, catch, switch, var, if, in, while, do, else, case, break, contract,class, export, boolean, throw, implements, import, this, public, call, value,require},
+ keywordstyle=\color{blue}\bfseries,
+ ndkeywords={uint,uint256,bytes,address,mapping,memory, ERC20},
+ %ndkeywordstyle=\color{pinegreen}\bfseries,
+ identifierstyle=\color{black},
+ sensitive=false,
+ comment=[l]{//},
+ morecomment=[s]{/*}{*/},
+ commentstyle=\color{purple}\ttfamily,
+ stringstyle=\color{red}\ttfamily,
+ morestring=[b]',
+ morestring=[b]"
+}
+
+\lstset{
+ language=JavaScript,
+ %backgroundcolor=\color{lightgray},
+ extendedchars=true,
+ basicstyle=\fontsize{7}{7}\selectfont\ttfamily,%\footnotesize\ttfamily,
+ showstringspaces=false,
+ showspaces=false,
+ numbers=left,
+ numbersep=0pt,
+ numberstyle=\footnotesize,
+ xleftmargin=2em,
+ tabsize=2,
+ breaklines=true,
+ showtabs=false,
+ captionpos=b,
+ morecomment=[s][\color{red}]{**}{**}
+}
+
 
 \DeclareRobustCommand\cs[1]{\texttt{\char`\\#1}}
 \newcommand\pkg{\textsf}
@@ -45,6 +87,7 @@
 \newcommand\mat{\symbf}
 \newcommand\ts{\symbfsf}
 \newcommand\real{\mathbf{R}}
+\newcommand{\codeff}[1]{\texttt{\footnotesize #1}}
 
 %\newcommand{\xxx}[1]{\textcolor{red}{#1}}
 %

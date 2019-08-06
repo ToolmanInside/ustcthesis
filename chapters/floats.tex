@@ -12,11 +12,31 @@
 
 \subsection{意外异常 (Unexpected Revert)漏洞}
 
-\textcolor{red}{TODO: Add text}
+意外异常漏洞是由于EVM的异常处理机制引起的一种拒绝服务 (Denial of Service) 攻击。这种漏洞多出现于在for循环中进行的批量转账操作中。产生该漏洞的主要原因是，开发者使用\codeff{require}或者\codeff{assert}去检查写于\codeff{for}循环内的转账外部调用。如果其中一次转账发生错误，\codeff{require}函数将抛出异常，并终止整个交易过程，这将导致后面的地址无法正常进行转账业务。更进一步说，如果这样的转账错误是攻击者蓄意为之，那么这个意外异常漏洞就给了攻击者一个停止当前服务的机会。Solidity研发团队不推荐也不建议开发者们用循环进行任何的转账业务。
+
+如下图2-1代码所示，在第5行，函数试图向\codeff{refundAddress}中存放的地址发送\codeff{ether}。该函数使用\codeff{send}函数，通过不断循环进行转账。同时，该函数也针对\codeff{send}函数用\codeff{require}进行了返回值检查。如果\codeff{refundAddress}中的任何一个地址发生转账错误，则该函数将停止运行，剩下的合约地址也没法正常进行转账业务。
+\small
+\begin{figure}
+\begin{minipage}[htbp]{1.0\linewidth}
+    \begin{lstlisting}
+    address[] private refundAddresses;
+    mapping (address => uint) public refunds;
+    function refundAll() public {
+            for(uint x; x < refundAddresses.length; x++) {
+                require(refundAddresses[x].send(refunds[refundAddresses[x]]));
+            }
+    }
+    \end{lstlisting}
+    %\caption{test}
+\end{minipage}
+\vspace{-5mm}
+\caption{意外异常调用漏洞示例代码}
+\end{figure}
+\normalsize
 
 \subsection{低级调用 (Unchecked Low-Level-Call)漏洞}
 
-\textcolor{red}{TODO: Add text}
+根据Solidity的官方文档\cite{solidity-doc}，Solidity语言中的低级调用 (call, delegatecall, etc.) 在调用失败时会返回失败布尔值，这些布尔值如果没有被用户捕捉，用户就会错过调用的失败信息，从而造成智能合约功能的混乱。Solidity语言经过数个版本的演化，推出了相对高级的内建外部调用 (transfer, send, etc.)，这些高级调用会检查调用的返回值，并在发现调用失败时抛出异常。新部署的合约使用高级的外部调用，能避免使用低级外部调用带来的低级调用漏洞。然而，由于区块链语言的特性，智能合约一经部署，无法撤除。根据我们的统计和观察，在以太坊平台上，仍有大量仍在使用的合约在使用低级调用时，对外部调用的调用结果没有任何的检查措施，这些合约有受到低级调用漏洞攻击的危险。
 
 \subsection{自毁 (Suicidal)漏洞}
 
