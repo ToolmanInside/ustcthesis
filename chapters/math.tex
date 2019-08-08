@@ -1,3 +1,25 @@
 % !TeX root = ../main.tex
 
 \chapter{主要研究方法及技术路线}
+
+\section{现有工具检测能力分析}
+
+在开始进行实验之前，我们需要对现有工具的检测能力进行充分地调研。只有在了解现有工具的检测能力、检测特点的情况下，我们才能开始进行漏洞标准库的构建和新工具的研发工作。为此，我们调研了当下对Solidity的研究工作，有的工作来自于商业团队，有的来自于学术团队；有的工具已经开源，并具备一定的社区影响力，有的工具发表于计算机顶级国际会议，带来了巨大的科研价值。发表于国际会议的工作，有的没有开源，对于这些没有开源的工作，虽然有论文做详细的说明，但由于不能获取到源代码，我们没办法对系统的内核做更深一步的分析，所以这些工具尽管有一定的学术影响力，我们也只能放弃。对于已经开源的工作，有些工具的开发逻辑不够严谨，或者相关文档不够完备，这些工具我们虽然能取得它们的源代码，但由于无法清晰地分析系统实现，故这些工具我们也无法很好地去分析他们的检测原理和检测能力。综上，在经过我们的筛选后，我们对如下工具在主要漏洞上的检测能力做出了总结，并列于表\ref{tab:detection_capability}。
+
+\begin{table}
+  \centering\small
+  \caption{现有工具对于主要漏洞的检测能力总结}
+  \begin{tabular}{cccccc}
+    \toprule
+    % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+     & \textsc{Slither} & \textsc{Oyente} & \textsc{Smartcheck} & \textsc{Securify} & \textsc{Athena} \\
+     \midrule
+    可重入漏洞 & $\checkmark$ & $\checkmark$ & $\times$ & $\checkmark$ & $\checkmark$ \\
+    意外异常漏洞 & $\checkmark$ & $\times$ & $\checkmark$ & $\times$ & $\checkmark$ \\
+    低级调用漏洞 & $\checkmark$ & $\times$ & $\checkmark$ & $\times$ & $\checkmark$ \\
+    自毁漏洞 & $\checkmark$ & $\times$ & $\times$ & $\times$ & $\checkmark$ \\
+    \bottomrule
+  \end{tabular}
+  \label{tab:detection_capability}
+\end{table}
+

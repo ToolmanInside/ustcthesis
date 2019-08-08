@@ -91,7 +91,17 @@ Solidity提供内建的自毁函数\codeff{selfdestruct()}，这个函数需要�
 \vspace{-5mm}
 \end{figure}
 
-在这个检测规则中，检测器逐一扫描CFG中的各个代码块，如果规则符合，就会报告漏洞。可重入漏洞的规则主要由三部分组成，其中任何一个条件不满足，都会被判断为清白的代码块，这三个条件包括：是否有对全局变量的读取操作、是否涉及交易过程、是否有对全局变量的写入操作。这个规则对可重入漏洞中的某一类型做出了准确地判断，但对其他新型变种可重入攻击，这个规则显得不够灵活。规则的修订过程是无止境的，基于规则的探测器不能保证漏洞检测的鲁棒性。
+在这个检测规则中，检测器逐一扫描CFG中的各个代码块，如果规则符合，就会报告漏洞。可重入漏洞的规则主要由三部分组成，其中任何一个条件不满足，都会被判断为清白的代码块，这三个条件包括：是否有对全局变量的读取操作、是否涉及交易过程、是否有对全局变量的写入操作。这个规则对可重入漏洞中的某一类型做出了准确地判断，但对其他新型变种可重入攻击，这个规则显得不够灵活。规则的修订过程是无止境的，基于规则的探测器不能保证漏洞检测的鲁棒性。如图\ref{fig:reentrancy_variant}所示，在这种潜在的可重入漏洞中，在安全的交易操作后面紧跟了一个危险的外部调用，这个危险的外部函数调用能触发对当前函数的二次访问。在我们看来，即使只重入了一次，只要造成经济损失，就要算作可重入漏洞。在我们观察\textsc{Slither}的内部原理后，我们发现\textsc{Slither}会漏掉类似的漏洞代码，它在安全的交易操作之后，没有发现对全局变量的写操作，这和\textsc{Slither}的检测规则相悖，故停止了检查，从而漏洞了紧随其后的危险外部调用。类似的例子还有很多，对于基于规则匹配的静态分析技术而言，不断修缮规则是一项长期的工作。
+
+\begin{figure}
+\vspace{+2mm}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/variant_reentrancy_pattern.png}
+  \caption{\textsc{Slither}漏掉的潜在可重入漏洞}
+  \label{fig:reentrancy_variant}
+\vspace{-5mm}
+\end{figure}
+
 
 
 \subsubsection{符号执行分析工具}
@@ -125,38 +135,55 @@ Solidity提供内建的自毁函数\codeff{selfdestruct()}，这个函数需要�
 
 在Solidity上，有形式化验证的分析工具\textsc{Zeus}，但是\textsc{Zeus}的团队在投递论文之后并没有公开程序源代码，也没有试图将工具商业化，因此我们没办法观察\textsc{Zeus}的运行原理。
 
-\subsection{总结}
+\subsection{现有Solidity分析工具总结}
 
-我们收集了当前公开了信息的Solidity分析工具的资料，并在表中做出总结：
+我们收集了当前公开了信息的Solidity分析工具的资料，并在表\ref{tab:all_tools}中做出总结：
 
-\textcolor{red}{Add tools survey table}
-
+\begin{table}[h]
+    \centering
+    \caption{The state-of-art tools for Solidity analysis.}
+    \small
+    \begin{tabular}{cccccc}
+\toprule
+ Tool Name & Github Stars & Open Sourced & Method & Technique &  Implementation \\
+ \midrule
+ \textsc{Mythril} & 1177 & $\checkmark$ & Dynamic & Constraint Solving  & Python \\
+ \textsc{MythX} & n.a.& $\times$ & Dynamic & Constraint Solving  &  n.a.  \\
+ \textsc{Slither} & 247 & $\checkmark$ & Static & CFG Analysis  & Python \\
+ \textsc{Echidna} & 306 & $\checkmark$ & Dynamic & Fuzzy Testing  & Haskell \\
+ \textsc{Manticore} & 1546 & $\checkmark$ & Dynamic & Testing  & Python\\
+ \textsc{Oyente} & 663 & $\checkmark$ &  Static & Symbolic Analysis  & Python \\
+ \textsc{Securify} & 129 & $\checkmark$ &  Static & Datalog Analysis  & Java \\
+ \textsc{SmartCheck} & 47 & $\checkmark$ & Static & AST Analysis  & Java\\
+ \textsc{Octopus} & 153 & $\checkmark$ & Static & Reverse Analysis  & Python \\
+ \textsc{Zeus} & n.a. & $\times$ & Static & Formal Verification  & n.a. \\
+ \textsc{ContractFuzzer} & 34 & $\checkmark$ & Dynamic & Fuzzy Testing  & Go \\
+ \bottomrule
+\end{tabular}
+\label{tab:all_tools}
+\end{table}
 
 \section{智能合约字节码相关知识}
 
 字节码是一种经过Solidity编译后生成的十六进制代码串，能直接被EVM运行。字节码中的那部分字节都可以和特定的操作对应起来。如表\ref{tab:opcode_gas}所示：
 
-\small
-\begin{table*}
-\vspace{+2mm}
-  \centering
-    \begin{tabular}{c|c|c|c}
-      \hline
+\begin{table}
+  \centering\small
+  \caption{操作码gas消耗对应表}
+    \begin{tabular}{cccc}
+      \toprule
       % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
       Opcode & Name & Description & Gas \\
-      \hline
+      \midrule
       0x00 & STOP & Halts execution & 0 \\
       0x01 & ADD & Addition operation & 3 \\
       0x02 & MUL & Multiplication operation & 5 \\
       0x03 & SUB & Subtraction operation & 3 \\
       ... & ... & ... & ... \\
-      \hline
+      \bottomrule
     \end{tabular}
-  \caption{操作码gas消耗对应表}
   \label{tab:opcode_gas}
-\vspace{-5mm}
-\end{table*}
-\normalsize
+\end{table}
 
 操作名和字节码中的十六进制码一一对应，每个操作都有特定的意义，并且有着不同的gas消耗量。因此，我们分析字节码的第一步应该从对应表着手，先将十六进制码转换成对应的操作名，区分出操作码和操作数，并将字节码翻译为汇编码。
 
