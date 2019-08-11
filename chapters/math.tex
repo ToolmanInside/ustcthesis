@@ -67,7 +67,42 @@
   \label{fig:similarity}
 \vspace{-5mm}
 \end{figure}
-我们可以明显看出，大部分智能合约软件内部存在着代码克隆现象，我们推测这是由于Solidity代码无法引用代码引起的。很多智能合约软件直接复制已经存在的软件代码，稍加改动，如修改了交易地址，甚至不改动就添加到自己的代码中，参与自己软件的运行过程。很明显，这虽然方便了开发者，减轻了开发任务，但是直接拷贝代码的行为容易在无意间引入漏洞。在一个存在很多克隆代码的平台，要保证软件的平均安全等级是很困难的。Solidity研究团队推荐开发者拷贝或使用经过官方团队审计的接口代码，但是不推荐开发者拷贝其他任何代码。\textcolor{red}{Add examples and explanations}
+我们可以明显看出，大部分智能合约软件内部存在着代码克隆现象，我们推测这是由于Solidity代码无法引用代码引起的。很多智能合约软件直接复制已经存在的软件代码，稍加改动，如修改了交易地址，甚至不改动就添加到自己的代码中，参与自己软件的运行过程。很明显，这虽然方便了开发者，减轻了开发任务，但是直接拷贝代码的行为容易在无意间引入漏洞。在一个存在很多克隆代码的平台，要保证软件的平均安全等级是很困难的。Solidity研究团队推荐开发者拷贝或使用经过官方团队审计的接口代码，但是不推荐开发者拷贝其他任何代码。
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{.5\linewidth}
+    \centering
+    \begin{minipage}{1.0\linewidth}
+    \begin{lstlisting}
+    function refundAll() public {
+    for(uint x; x < refundAddresses.length; x++) {
+    require(refundAddresses[x]);
+    }
+    }
+    \end{lstlisting}
+    %\caption{test}
+    \end{minipage}
+    \caption{相似代码示例}
+    \end{subfigure}
+    \quad
+    \begin{subfigure}{.5\linewidth}
+    \centering
+    \begin{minipage}{1.0\linewidth}
+    \begin{lstlisting}
+    contract gamble{
+    ...
+    public suicidal(address target) public {
+    selfdestruct(target);
+    }
+    }
+    \end{lstlisting}
+    %\caption{test}
+    \end{minipage}
+    \caption{相似代码示例}
+    \end{subfigure}
+    \caption{相似代码示例}
+    \label{fig:similar_code}
+\end{figure}
 
 \subsection{智能合约克隆分析技术探究}
 针对以太坊平台如此严重的代码克隆现象，我们提出使用代码克隆分析技术来寻找漏洞的方法。在VUDDY\cite{vuddy}这篇工作中，研发团队使用了根据漏洞代码的语法特征提取了漏洞的抽象表示，再通过相似度计算算法来寻找漏洞代码。VUDDY的这种技术，是从漏洞本身出发，寻找与漏洞相似代码的一种技术。这种方法具备良好的可扩展性，在寻找大量相似代码时也能保证令人满意的速度，在VUDDY的论文中，开发团队使用VUDDY完成了数以亿计行的代码的漏洞检测工作，并成功申请了数十个CVE。VUDDY的工作给了我们启发，在智能合约上，我们需要使用一种足够巧妙的方法去提取漏洞的抽象表现形式，抽象程度不能太高或者太低，太高会误报很多漏洞代码，太低则会漏掉很多真实的漏洞代码；我们还需要使用足够巧妙的代码相似度算法去计算代码之间的相似度，这种相似度计算方法必须和代码的抽象表现形式结合，不能有太高的时间复杂度；最后，我们需要对系统报告的漏洞做一定程度的人工分析，虽然在严谨的实验中，人工的行为容易带来实验结果的偏差，但是我们参与实验的检查人员都是智能合约、区块链及软件工程方面的领域专家，可以尽可能减少人工介入带来的偏差。那些经过人工检查，或者被系统报告有漏洞的代码，我们会用来不断地改进我们系统的检测能力，并建立漏洞标准库。
