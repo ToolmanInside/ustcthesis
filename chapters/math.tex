@@ -67,40 +67,37 @@
   \label{fig:similarity}
 \vspace{-5mm}
 \end{figure}
-我们可以明显看出，大部分智能合约软件内部存在着代码克隆现象，我们推测这是由于Solidity代码无法引用代码引起的。很多智能合约软件直接复制已经存在的软件代码，稍加改动，如修改了交易地址，甚至不改动就添加到自己的代码中，参与自己软件的运行过程。很明显，这虽然方便了开发者，减轻了开发任务，但是直接拷贝代码的行为容易在无意间引入漏洞。在一个存在很多克隆代码的平台，要保证软件的平均安全等级是很困难的。Solidity研究团队推荐开发者拷贝或使用经过官方团队审计的接口代码，但是不推荐开发者拷贝其他任何代码。
+我们可以明显看出，大部分智能合约软件内部存在着代码克隆现象，我们推测这是由于Solidity代码无法引用代码引起的。很多智能合约软件直接复制已经存在的软件代码，稍加改动，如修改了交易地址，甚至不改动就添加到自己的代码中，参与自己软件的运行过程，如图\ref{fig:similar_code}所示。很明显，这虽然方便了开发者，减轻了开发任务，但是直接拷贝代码的行为容易在无意间引入漏洞。在一个存在很多克隆代码的平台，要保证软件的平均安全等级是很困难的。Solidity研究团队推荐开发者拷贝或使用经过官方团队审计的接口代码，但是不推荐开发者拷贝其他任何代码。
 \begin{figure}[H]
     \centering
-    \begin{subfigure}{.5\linewidth}
+    \begin{subfigure}{\linewidth}
     \centering
     \begin{minipage}{1.0\linewidth}
     \begin{lstlisting}
-    function refundAll() public {
-    for(uint x; x < refundAddresses.length; x++) {
-    require(refundAddresses[x]);
-    }
+    contract BanyanIncomeLockPosition is Ownable {
+    uint64 public unlockBlock = 8372051;
+    address public tokenAddress = 0x35a69642857083BA2F30bfaB735dacC7F0bac969;
+    ...
     }
     \end{lstlisting}
     %\caption{test}
     \end{minipage}
-    \caption{相似代码示例}
     \end{subfigure}
     \quad
-    \begin{subfigure}{.5\linewidth}
+    \begin{subfigure}{\linewidth}
     \centering
     \begin{minipage}{1.0\linewidth}
     \begin{lstlisting}
-    contract gamble{
+    contract BanyanIncomeLockPosition is Ownable {
+    uint64 public unlockBlock = **6269625**;
+    address public tokenAddress = **0x0a3f9678d6b631386c2dd3de8809b48b0d1bbd56**;
     ...
-    public suicidal(address target) public {
-    selfdestruct(target);
-    }
     }
     \end{lstlisting}
     %\caption{test}
     \end{minipage}
-    \caption{相似代码示例}
     \end{subfigure}
-    \caption{相似代码示例}
+    \caption{相似代码示例，两个地址不同的智能合约软件仅有微小不同，不同之处已用**标出}
     \label{fig:similar_code}
 \end{figure}
 
@@ -119,4 +116,66 @@
   \caption{漏洞检测系统结构设计图}
   \label{fig:system_diagram}
 \vspace{-5mm}
-\end{figure}
+\end{figure} 
+
+\section{漏洞代码签名提取技术}
+
+对于我们需要研究的主要漏洞，我们需要从现有的漏洞示例和现有工具的检测策略中不断学习，加上我们的领域专家对以太坊平台及智能合约的认识，总结归纳出漏洞的签名，以便于之后使用克隆分析技术在漏洞签名的基础上寻找漏洞代码。对于现有的几个开源工具，我们可以通过阅读源代码的方式去研究他们的实现原理，分析他们的制定的漏洞规则的优缺点，不断完善我们的漏洞签名。在本节，我们将针对不同的漏洞进行分析，并得到适合用作克隆分析技术的漏洞签名。
+
+\subsection{可重入漏洞签名提取}
+对于影响力巨大的可重入漏洞，\textsc{Slither}在实现中使用的检测器是以公式\ref{rule:slither: reentrance}为规则进行检测的。
+\vspace{+3mm}
+\begin{mdframed}[
+	linewidth = 1pt,
+	innertopmargin = 1pt,
+	innerbottommargin = 3pt,
+	outerlinewidth = 1pt
+	]
+	\begin{equation} \label{rule:slither: reentrance}
+	\small
+	\big (r(var_{global}) \wedge (operation_{sendeth}) \wedge (r(var_{global})) \Rightarrow \text{\emph{Reentrancy}}
+	\end{equation}
+\end{mdframed}
+\textsc{Slither}在检测可重入漏洞时，会首先检查控制流图中的全局变量读操作，即$r(var_{global})$，这一步是因为全局变量在以太坊中有着重要的作用。由于以太坊的底层运行是基于操作栈实现的，全局变量在以太坊通常是以\codeff{public}类型修饰，作用域包括整个合约。因此，对于全局变量的操作容易带来安全隐患，而对全局变量的读取操作则是对全局变量修改的第一步。\textsc{Slither}重视对全局变量的敏感操作，因此会检查对全局变量的读取和写入操作。更进一步，为了保证检测规则的准确性，\textsc{Slither}优先检查涉及转账操作$operation_{sendeth}$的全局变量修改，因为在转账操作周围的全局变量读写操作通常会带来收到漏洞攻击危险。\textsc{Slither}在控制流图上进行分析，控制流图的每个块内部都是中间语言形式的代码语句，这种中间语言在源代码的基础上做了一定程度的抽象，有利于\textsc{Slither}无视无关代码进行准确的漏洞检测。
+
+\textsc{Oyente}的检测规则如公式\ref{rule:oyente: reentrance}所示。
+\vspace{+3mm}
+\begin{mdframed}[
+	linewidth = 1pt,
+	innertopmargin = -10pt,
+	innerbottommargin = 3pt,
+	outerlinewidth = 1pt
+	]
+    \small
+	\begin{equation} \label{rule:oyente: reentrance}
+    \big ( r(var_{global}) \wedge (gas_{trans} > 2300) \wedge var_{amount} \text{ is a global variable} \big )  \Rightarrow \text{\emph{Reentrancy}}
+	\end{equation}
+\end{mdframed}
+\textsc{Oyente}的检测规则和\textsc{Slither}有很大的不同，因为\textsc{Oyente}是对智能合约的字节码进行检测的工具。对字节码反编译过后的中间语言建立控制流图，并进行分析。因为字节码的操作码和操作所消耗的\codeff{gas}是一一对应的，如表\ref{tab:opcode_gas}所示，因此，对字节码进行分析可以分析函数的\codeff{gas}消耗，这是以源代码为输入的分析方式所做不到的。同时，\textsc{Oyente}检查了外部调用操作消耗的\codeff{gas}是否超过2300，这是因为可重入漏洞的一个最大的特点就是针对重复调用并不断消耗\codeff{gas}。如果发现了外部调用大于2300这个阈值，则很有可能发生了重入。最后，\textsc{Oyente}检查了交易的金额变量是否为全局变量。这是因为全局变量经常涉及敏感操作，而控制转账金额的变量决定了受害者受到的损失的大小。\textsc{Oyente}的规则要求控制转账金额的变量必须不为全局变量。
+
+\textsc{Securify}的检测规则如公式\ref{rule:securify: reentrance}所示。\textsc{Securify}的检测规则相比\textsc{Slither}和\textsc{Oyente}要简单很多。\textsc{Securify}是基于\emph{Datalog}语言做的符号执行分析，它会在检测漏洞之前将智能合约字节码转换成\emph{Datalog}语言。\textsc{Securify}在检查可重入漏洞时，会检查语句块内部有没有外部调用和对全局变量的操作，避免发生敏感操作。其次，如果检测器发现对全局变量的操作没有放在外部调用之前，检测器会报告这是一个可重入漏洞。\textsc{Securify}的检测逻辑简单易懂，它抓住全局变量和外部调用的先后关系进行检测，\emph{Datalog}语言也对产出准确的检测结果有一定的帮助。但是，相比其他两个工具，\textsc{Securify}的检测模式还是过于简单和粗暴，这可能会带来很多的误报。
+\vspace{+3mm}
+\begin{mdframed}[
+	linewidth = 1pt,
+	innertopmargin = -3pt,
+	innerbottommargin = 3pt,
+	outerlinewidth = 1pt
+	]
+    \small
+	\begin{equation} \label{rule:securify: reentrance}
+    \big ( externalcall \wedge w(var_{global}) \wedge \text{ write must follow the call} \big ) \Rightarrow \text{\emph{Reentrancy}}
+	\end{equation}
+\end{mdframed}
+通过对其他三个工具的观察和我们对智能合约漏洞的理解，我们认为，一个完备的可重入漏洞规则，应该是如公式\ref{rule:athena: reentrance}所示。在我们的检测规则中，我们没有采用\textsc{Oyente}的检测规则中对操作消耗\codeff{gas}检查，因为我们的检测工作是面向源代码而不是字节码， 在源代码上做\codeff{gas}消耗分析会产生很多困难；我们也没有采用\textsc{Securify}中对于外部调用和全局变量操作的前后关系进行检测的规则，因为我们觉得这个规则容易带来误报。我们吸取了\textsc{Slither}的检测规则中对交易操作与全局变量写入操作的检查，并加入了没有\codeff{gas}限制的危险调用的检查。这是因为早期的\codeff{call}、\codeff{delegatecall}等低级调用如果不加限制，很容易带来重入隐患。如果出现没有\codeff{gas}限制的危险调用，我们就可以认为这能够带来一定的漏洞隐患；同时如果出现在转账操作之后有相关的全局变量写入操作，我们也认为会带来漏洞隐患。
+\begin{mdframed}[
+	linewidth = 1pt,
+	innertopmargin = -10pt,
+	innerbottommargin = 3pt,
+	outerlinewidth = 1pt
+	]
+    \small
+	\begin{equation} \label{rule:athena: reentrance}
+    \big ((dager\_call) \wedge (no\_gas\_limit)) \vee ((operation_{sendeth}) \wedge (w(var_{global})) \Rightarrow \text{\emph{Reentrancy}}
+	\end{equation}
+\end{mdframed}
+
