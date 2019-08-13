@@ -116,7 +116,7 @@
   \caption{漏洞检测系统结构设计图}
   \label{fig:system_diagram}
 \vspace{-5mm}
-\end{figure} 
+\end{figure}
 
 \section{漏洞代码签名提取技术}
 
@@ -154,16 +154,15 @@
 \textsc{Oyente}的检测规则和\textsc{Slither}有很大的不同，因为\textsc{Oyente}是对智能合约的字节码进行检测的工具。对字节码反编译过后的中间语言建立控制流图，并进行分析。因为字节码的操作码和操作所消耗的\codeff{gas}是一一对应的，如表\ref{tab:opcode_gas}所示，因此，对字节码进行分析可以分析函数的\codeff{gas}消耗，这是以源代码为输入的分析方式所做不到的。同时，\textsc{Oyente}检查了外部调用操作消耗的\codeff{gas}是否超过2300，这是因为可重入漏洞的一个最大的特点就是针对重复调用并不断消耗\codeff{gas}。如果发现了外部调用大于2300这个阈值，则很有可能发生了重入。最后，\textsc{Oyente}检查了交易的金额变量是否为全局变量。这是因为全局变量经常涉及敏感操作，而控制转账金额的变量决定了受害者受到的损失的大小。\textsc{Oyente}的规则要求控制转账金额的变量必须不为全局变量。
 
 \textsc{Securify}的检测规则如公式\ref{rule:securify: reentrance}所示。\textsc{Securify}的检测规则相比\textsc{Slither}和\textsc{Oyente}要简单很多。\textsc{Securify}是基于\emph{Datalog}语言做的符号执行分析，它会在检测漏洞之前将智能合约字节码转换成\emph{Datalog}语言。\textsc{Securify}在检查可重入漏洞时，会检查语句块内部有没有外部调用和对全局变量的操作，避免发生敏感操作。其次，如果检测器发现对全局变量的操作没有放在外部调用之前，检测器会报告这是一个可重入漏洞。\textsc{Securify}的检测逻辑简单易懂，它抓住全局变量和外部调用的先后关系进行检测，\emph{Datalog}语言也对产出准确的检测结果有一定的帮助。但是，相比其他两个工具，\textsc{Securify}的检测模式还是过于简单和粗暴，这可能会带来很多的误报。
-\vspace{+3mm}
 \begin{mdframed}[
 	linewidth = 1pt,
-	innertopmargin = -3pt,
+	innertopmargin = -10pt,
 	innerbottommargin = 3pt,
 	outerlinewidth = 1pt
 	]
     \small
 	\begin{equation} \label{rule:securify: reentrance}
-    \big ( externalcall \wedge w(var_{global}) \wedge \text{ write must follow the call} \big ) \Rightarrow \text{\emph{Reentrancy}}
+    \big ( external\_call \wedge w(var_{global}) \wedge \text{ write must follow the call} \big ) \Rightarrow \text{\emph{Reentrancy}}
 	\end{equation}
 \end{mdframed}
 通过对其他三个工具的观察和我们对智能合约漏洞的理解，我们认为，一个完备的可重入漏洞规则，应该是如公式\ref{rule:athena: reentrance}所示。在我们的检测规则中，我们没有采用\textsc{Oyente}的检测规则中对操作消耗\codeff{gas}检查，因为我们的检测工作是面向源代码而不是字节码， 在源代码上做\codeff{gas}消耗分析会产生很多困难；我们也没有采用\textsc{Securify}中对于外部调用和全局变量操作的前后关系进行检测的规则，因为我们觉得这个规则容易带来误报。我们吸取了\textsc{Slither}的检测规则中对交易操作与全局变量写入操作的检查，并加入了没有\codeff{gas}限制的危险调用的检查。这是因为早期的\codeff{call}、\codeff{delegatecall}等低级调用如果不加限制，很容易带来重入隐患。如果出现没有\codeff{gas}限制的危险调用，我们就可以认为这能够带来一定的漏洞隐患；同时如果出现在转账操作之后有相关的全局变量写入操作，我们也认为会带来漏洞隐患。
@@ -179,3 +178,128 @@
 	\end{equation}
 \end{mdframed}
 
+\subsection{意外异常漏洞签名提取}
+
+意外漏洞多发生于在\codeff{for}或者\codeff{while}循环中进行交易操作的情况，账户持有者向其他人循环发送金额，如果在循环中的某一次转账操作发生异常导致转账异常，则后面的数次转账操作都将被取消。这个漏洞容易被黑客用于DoS攻击，如果黑衣故意在转账过程中加入异常代码，使得整个交易次数取消，就达到了拒绝服务攻击的目的。
+
+对于意外异常漏洞，支持的工具有\textsc{Slither}、\textsc{Smartcheck}和我们的系统\textsc{Athena}，而\textsc{Oyente}和\textsc{Securify}因为是在字节码的基础上做进一步分析，很难抓取到这个漏洞的特点，因此这两个工具不具备检查这个漏洞的功能。\textsc{Slither}对于这个漏洞的检测规则如公式\ref{rule:slither: revert}所示。
+\begin{mdframed}[
+	linewidth = 1pt,
+	innertopmargin = -5pt,
+	innerbottommargin = 3pt,
+	outerlinewidth = 1pt
+	]
+    \small
+	\begin{equation} \label{rule:slither: revert}
+    \big (has\_loop) \wedge (calls\_inside) \Rightarrow \text{\emph{Unexpected Revert}}
+	\end{equation}
+\end{mdframed}
+
+在公式中，\textsc{Slither}首先检查控制流图中的循环结构，如\codeff{for}或者\codeff{while}循环，然后检查在循环结构的内部是否包含外部调用语句。在检查外部调用的时候，\textsc{Slither}检查高级外部调用（即用户定义的函数的调用）、低级调用以及转账函数\codeff{send}和\codeff{transfer}。如果有其中任何一种调用出现在循环结构内，\textsc{Slither}则判定这段代码含有意外异常漏洞。
+
+\textsc{Smartcheck}检测意外异常漏洞的规则如公式\ref{rule:smartcheck: revert}所示。
+\begin{mdframed}[
+	linewidth = 1pt,
+	innertopmargin = -5pt,
+	innerbottommargin = 3pt,
+	outerlinewidth = 1pt
+	]
+    \small
+	\begin{equation} \label{rule:smartcheck: revert}
+    \big ((if) \wedge (revert\_inside) \vee (for) \wedge (calls\_inside)) \Rightarrow \text{\emph{Unexpected Revert}}
+	\end{equation}
+\end{mdframed}
+\textsc{Smartcheck}在处理意外异常错误的时候会检查两种情况，一种是\codeff{if}语句和函数体内部有没有\codeff{revert}，如果同时成立则有了抛出异常的可能性，引发意外异常漏洞；一种是在\codeff{for}循环语句的内部是否包含外部调用，如果外部调用失败则有可能会造成意外异常错误。\textsc{Smartcheck}和其他工具不同的地方是把\codeff{revert}也当作漏洞检测规则的一部分，在我们看来\codeff{revert}多用于需要抛出异常的函数体内，属于正常的业务逻辑，不能被归纳为漏洞的一部分。同时，\textsc{Smartcheck}对一切的外部调用一视同仁，只要出现在\codeff{for}循环内部则判断为有漏洞，这种判断规则在我们看来，有些过于简单和武断。
+
+在观察过其他两个工具对于意外异常漏洞的检测规则后，我们制定我们系统的检测规则如式\ref{rule:athena: revert}所示。
+\begin{mdframed}[
+	linewidth = 1pt,
+	innertopmargin = -5pt,
+	innerbottommargin = 3pt,
+	outerlinewidth = 1pt
+	]
+    \small
+	\begin{equation} \label{rule:athena: revert}
+    \big (for \vee while) \wedge ((require \wedge send) \vee transfer)  \Rightarrow \text{\emph{Unexpected Revert}}
+	\end{equation}
+\end{mdframed}
+在我们的规则中，我们首先检查函数体是否包含\codeff{for}或者\codeff{while}循环语句，再检查函数体内部有没有\codeff{require}语句和\codeff{send}语句，如果没有的话再检查函数体内部是否包含\codeff{transfer}语句。我们制定这样的检测规则是因为\emph{Solidity}的部分内建语句自带了抛出异常功能。例如，\codeff{transfer}语句有抛出异常的功能，而\codeff{send}语句没有。所以如果使用\codeff{send}语句，当调用执行失败，\codeff{send}会返回\codeff{false}，但不会抛出异常。如果\codeff{send}语句外部有\codeff{require}函数对交易的执行结果进行检验，\codeff{send}语句就具备了抛出异常的功能，也就有了触发意外异常漏洞的风险。
+
+\subsection{低级调用漏洞签名提取}
+低级调用漏洞主要是由低级漏洞自身的安全检查不完备造成的。多数低级调用，如\codeff{call}、\codeff{delegatecall}都是\emph{Solidity}语言诞生初期的产物。这些低级调用实现了最基本的功能，但缺少了一些安全检查，导致使用这些低级调用的行为变成引发漏洞的行为。\emph{Solidity}不推荐开发者使用这些低级调用函数，如果实在有使用的需要，要求开发者在低级调用的外部加上\codeff{require}、\codeff{assert}等检查函数。如果低级调用执行失败，这些检查函数会收到低级调用的返回值\codeff{false}，并抛出异常终止整个合约的运行。
+
+\textsc{Slither}对于这种低级调用漏洞的检测规则如公式\ref{rule:slither: llc}所示。
+\begin{mdframed}[
+	linewidth = 1pt,
+	innertopmargin = -5pt,
+	innerbottommargin = 3pt,
+	outerlinewidth = 1pt
+	]
+    \small
+	\begin{equation} \label{rule:slither: llc}
+    \big ( call) \vee (delegatecall) \vee (send) \Rightarrow \text{\emph{Unchecked Low Level Call}}
+	\end{equation}
+\end{mdframed}
+\textsc{Slither}对于这个漏洞的检查规则非常简单粗暴，它检查函数控制流图上所有的低级调用操作，一旦出现低级调用，就判断函数出现低级调用漏洞。毋庸置疑，这会给\textsc{Slither}在这个漏洞的检测任务上带来很高的误报率。
+
+\textsc{Smartcheck}对与这种低级调用漏洞的检测规则如公式\ref{rule:smartcheck: llc}所示。
+\begin{mdframed}[
+	linewidth = 1pt,
+	innertopmargin = -5pt,
+	innerbottommargin = 3pt,
+	outerlinewidth = 1pt
+	]
+    \small
+	\begin{equation} \label{rule:smartcheck: llc}
+    \big (if) \wedge ((call) \vee (delegatecall) \vee (send)) \Rightarrow \text{\emph{Unchecked Low Level Call}}
+	\end{equation}
+\end{mdframed}
+\textsc{Smartcheck}对于这个漏洞会首先检查\codeff{if}语句的使用，如果出现了这个语句，再检查语句内部是否包含\codeff{call}、\codeff{delegatecall}或者\codeff{send}这三个低级调用，如果有的低级调用没有被包含在\codeff{if}语句内部则判断代码包含低级调用漏洞。\textsc{Smartchecl}认为只有\codeff{if}语句才能算作检查，而忽略了\codeff{require}、\codeff{assert}这两种检查函数，这会忽略掉很多真正的漏洞。
+
+在观察其他两个工具对低级调用漏洞的检测规则之后，我们制定了我们的系统的检测规则如公式\ref{rule:athena: llc}所示。
+\begin{mdframed}[
+	linewidth = 1pt,
+	innertopmargin = -5pt,
+	innerbottommargin = 3pt,
+	outerlinewidth = 1pt
+	]
+    \small
+	\begin{equation} \label{rule:athena: llc}
+    \begin{split}
+       \big ((call) \vee (delegatecall) \vee (send)) \wedge without ((require) \vee (assert) \vee (if))  \\
+        \Rightarrow \text{\emph{Unchecked Low Level Call}} 
+    \end{split}
+	\end{equation}
+\end{mdframed}
+我们的规则覆盖了主要的低级调用如\codeff{call}、\codeff{delegatecall}和\codeff{send}，同时也附加了对几种主要的检查函数\codeff{require}、\codeff{assert}和\codeff{if}的检查。我们认为\textsc{Slither}的规则会产生很多误报，因为它的规则过于武断，没有对检查函数的检查环节；我们也认为\textsc{Smartcheck}的规则也是不完备的，因为它只检查\codeff{if}这一个检查函数，而没有覆盖其他的两个检查函数，这也会对检查结果产生影响。在分析以上两个工具的规则的优缺点之后，我们设计了自己的检查规则。
+
+\subsection{自毁漏洞}
+自毁漏洞是也是由于函数的正常功能在不正当使用条件下使用产生的。\codeff{selfdestruct}函数实在\emph{Solidity}语言设计之初就加入的函数，它停止当前的任何功能，清空\codeff{gas}，并把当前合约剩余的余额全部转移至其他合约。这个内建函数有一个参数，即转移余额的地址。这个函数本属于智能合约正常交易周期的一部分，负责在合约完成其生命周期之后清理剩余的合约资源，避免合约当中的资源浪费。但是，如果这个函数没有受到严格的调用限制，比如在特定的时间、特定的运行次数或者特定的访问者调用，甚至转账的地址是不受到合约的持有者控制的，这个函数就会引发自毁漏洞。攻击者触发函数，停止合约的当前功能，并向攻击者的账户转移所有财产。
+
+\textsc{Slither}对于这个漏洞的检查规则如公式\ref{rule:slither: suicidal}所示。
+\begin{mdframed}[
+	linewidth = 1pt,
+	innertopmargin = -5pt,
+	innerbottommargin = 3pt,
+	outerlinewidth = 1pt
+	]
+    \small
+	\begin{equation} \label{rule:slither: suicidal}
+    \big (selfdestruct) \wedge (func_{public}) \wedge (access\_available) \Rightarrow \text{\emph{Suicidal}}
+	\end{equation}
+\end{mdframed}
+\textsc{Slither}在检查这个漏洞时候，首先检查这个函数受否包含\codeff{selfdestruct}自毁函数，其次检查包括这个自毁函数的外部函数修饰符是否是\codeff{public}，最后检查这个自毁函数是否能被轻易到达。\textsc{Slither}的检测规则目前已经比较完备，但还有一点不足，\textsc{Slither}这样的检查方式会把正常的业务逻辑也判为漏洞代码。因为正常的业务代码函数体积较大，在函数的最后有自毁函数，这个函数符合\textsc{Slither}的检测规则，但是它对自毁函数的使用是正确的。
+
+为了改正\textsc{Slither}的一点缺陷，我们提出我们系统的检查规则如公式\ref{rule:athena: suicidal}所示。
+\begin{mdframed}[
+	linewidth = 1pt,
+	innertopmargin = -10pt,
+	innerbottommargin = 3pt,
+	outerlinewidth = 1pt
+	]
+    \small
+	\begin{equation} \label{rule:athena: suicidal}
+    \big (selfdestruct) \wedge (func_{public}) \wedge (access\_available) \wedge (func_{selfdestruct}) \Rightarrow \text{\emph{Suicidal}}
+	\end{equation}
+\end{mdframed}
+我们的检测规则在\textsc{Slither}的基础上加入了新的要求，我们要求只有当检测的函数为自毁函数体，即只包含自毁功能的函数时，我们才判断这个函数为漏洞函数。这个规则修正了\textsc{Slither}把很多正常的业务逻辑误判为漏洞的缺陷，降低了系统的误报率。
