@@ -338,4 +338,146 @@
 \caption{安全盾实例，开发者借助图中第7行的身份验证，有效防止可重入攻击}
 \label{fig:ss_example}
 \end{figure}
-代码中的\codeff{owner}地址在构造器\codeff{constructor}中被赋值，而构造器只有在合约软件初始化时才能被调用，故\codeff{owner}变量一定是合约创建者的地址。在函数中\codeff{buy}中，第7行检查了合约访问者\codeff{msg.sender}与\codeff{owner}地址是否相等，这不起眼的一行，有效地阻止了可重入攻击。
+代码中的\codeff{owner}地址在构造器\codeff{constructor}中被赋值，而构造器只有在合约软件初始化时才能被调用，故\codeff{owner}变量一定是合约创建者的地址。在函数中\codeff{buy}中，第7行检查了合约访问者\codeff{msg.sender}与\codeff{owner}地址是否相等。这不起眼的一行，有效地阻止了可重入攻击。
+
+在我们阅读Solidity源代码，分析程序执行情况的过程中，我们发现有大量优秀的开发者，在开发智能合约软件的时候遵守了软件的开发规范，使得智能合约软件具备了防范漏洞攻击的能力。这些防范技术各有差异，虽然可以把它们大致分为几类，但它们个体之间的实现差异较大，这不利于克隆技术的实现，会带来很高的误报率。这是由于克隆分析技术的特性决定的。事实上，在其他软件平台，漏洞代码和安全代码之间的差异可能会变得很小，过于相似的代码导致克隆分析技术无法直接对这些代码做出准确判断。因此，在我们的检测系统中，我们将加入安全盾技术，通过这项技术减少现有克隆分析技术可能带来的高误报数，提高系统检测漏洞的准确率。在接下来的几小节中，我们将针对我们使用的安全盾技术进行阐述。其中，对于可重入漏洞，我们总结了SS1-SS5，对于意外异常漏洞，我们总结了SS6-SS7，对于低级调用漏洞，我们总结了SS8，对于自毁漏洞，我们总结了SS9。
+
+\subsection{SS1：在函数体中加入身份检查}
+
+SS1通过简单的方法就实现了限制函数访问的功能。很多开发者在编写函数的功能的时候，会在实际的功能代码前面加入相关的身份检查，检查合约的访问者是否是合约的持有者或者是否合法。实现身份检查有多种形式，我们举例一种形式如图\ref{fig:ss1_example}所示。
+\begin{figure}
+\begin{minipage}[htbp]{1.0\linewidth}
+    \begin{lstlisting}
+    function finalize() public initialized {
+        require(finalizedBlock == 0);
+        require(finalizedTime == 0);
+        require(getBlockTimestamp() >= startTime);
+        require(msg.sender == controller || getBlockTimestamp() > endTime);
+
+        uint256 tokenCap = aix.totalSupply().mul(100).div(51);
+        aix.generateTokens(devHolder, tokenCap.mul(20).div(100));
+        aix.generateTokens(communityHolder, tokenCap.mul(29).div(100));
+        ...
+    }
+    \end{lstlisting}
+    %\caption{test}
+\end{minipage}
+\vspace{-5mm}
+\caption{SS1：在函数体中加入身份检查}
+\label{fig:ss1_example}
+\end{figure}
+在图\ref{fig:ss1_example}中，代码的第3-6行实现了四种检查功能，其中在第6行通过检查\codeff{msg.sender == controller}来限制对该函数访问。\codeff{controller}是一个全局变量，在合约的构造函数中被赋值，这意味着他只能由创建者进行赋值，无法被其他人更改。在这里这个函数检查了访问这身份是否是\codeff{controller}，这也就意味着这段代码只能被合约的持有者执行。在很多情况下，执行转账操作、自毁操作时，合约的创建者希望函数功能由创建者本人或者创建者信任的访问者执行，他们通过添加身份检查实现了这个功能。
+\subsection{SS2：限制转账的目标地址}
+
+开发者也可以通过限制转账的目标地址来进行可重入攻击的防御。目标的转账地址通常都是由一个全局变量进行维护或者通过函数的传参进行更新，如果不注意转账地址的限制，攻击者就可以采用多种方式修改转账的目标地址，改为自己的账户地址进而通过\codeff{fallback}函数进行重入攻击。在Solidity开发过程中，对与转账地址的管理，一定要慎之又慎。通常，开发者可以通过限制转账地址，即采用硬编码的方式制定转账的目标地址，或者限制转账地址的修改，即只允许部分访问者有权利更改转账的目标地址这两种方式去防御可重入攻击。如图\ref{fig:ss2_example}中代码所示。
+\begin{figure}
+\begin{minipage}[htbp]{1.0\linewidth}
+    \begin{lstlisting}
+    contract Etherama{
+        constructor() public {
+            require(dataContractAddress != address(0x0));
+            _data = EtheramaData(0x00a2409f41fdf485afd23599219c60a77524bba2);
+            ...
+            creator = msg.sender;
+        }
+        function changeData(address newAddress) public {
+            require(msg.sender == creator);
+            _data = EthermaData(newAddress);
+        }
+        function migrateToNewNewControllerContract() public {
+            uint256 remainingTokenAmount = getRemainingTokenAmount();
+            ...
+            _data.transfer(remainingTokenAmount);
+            ...
+        }
+    }
+\end{lstlisting}
+%\caption{test}
+\end{minipage}
+\vspace{-5mm}
+\caption{SS2：限制转账的目标地址}
+\label{fig:ss2_example}
+\end{figure}
+在图中，函数在第11行向\codeff{\_data}进行转账操作 ，而这个全局变量在函数构造器\codeff{constructor}里面进行初始化，初始化时，这个初始化函数使用了一个20位的16进制的地址，即合约账户在以太坊平台上的绝对地址进行了赋值，故这个转账的目标地址在一开始是被限制死的。随后，虽然函数中准备了更改目标转账地址的函数\codeff{changeData}可以进行\codeff{\_data}数据的修改，但是在这个修改函数的一开始就使用了\codeff{require}函数进行了身份验证，限制了修改函数的操作必须由\codeff{creator}执行，而和\codeff{\_data}一样，这个\codeff{creator}的地址也是在构造器中进行的初始化，外来的访问者是无法随意突破这道屏障的。总的来说，这个合约的开发者虽然提供了转账操作、修改地址等功能，但是对涉及转账目标地址的操作，每一步都设置了防范措施，在这些防范措施的保护下，合约的转账地址很难被攻击者肆意修改。
+
+\subsection{SS3；使用函数修饰器限制访问}
+SS3的原理和SS1很像，相比SS1在函数体中直接进行身份检查，SS3把这个实现放到里函数修饰器里。函数修饰器是Solidity语言的特点之一。Solidity语言提供\codeff{internal}、\codeff{private}、\codeff{public}等内建修饰符限制对函数的访问，除此之外，Solidity还允许开发者使用\codeff{modifier}模块自行设计函数修饰器。自定义函数修饰器中通常都有下划线\codeff{\_;}，表明修饰目标函数的原函数体。将自定义修饰符添加至函数原型上，执行时通常将优先执行修饰器内部的功能，然后再执行原函数体。因为自定义修饰符的这个特性，开发者们将身份验证的模块写入函数修饰器内部，保证在执行时，先通过修饰器内部的身份检查函数检查访问者的身份，再执行函数的具体功能。如图\ref{fig:ss3_example}中的代码所示。
+\begin{figure}
+\begin{minipage}[htbp]{1.0\linewidth}
+    \begin{lstlisting}
+    contract ShortOrder is SafeMath {
+        modifier onlyAdmin() {
+            require(msg.sender == admin);
+            _;
+        }
+        ...
+        function claims(address[2] tokenUser, address usr, uint amount) external onlyAdmin {
+            bytes32 orderHash = keccak256(tokenUser[0],tokenUser[1]);
+            ...
+            usr.transfer(safeAdd(orderRecord[orderHash],amount));
+            Token(tokenUser[0]).transfer(admin,orderRecord[orderHash]);
+            orderRecord[orderHash].balance = uint(0);
+            ...
+        }
+    }
+\end{lstlisting}
+%\caption{test}
+\end{minipage}
+\vspace{-5mm}
+\caption{SS3：使用函数修饰器限制访问}
+\label{fig:ss3_example}
+\end{figure}
+图中的函数第2-4行实现了修饰器\codeff{onlyAdmin}，在修饰器的开始使用了\codeff{require}语句检查访问者的身份，限制函数仅允许合约的管理员访问。这是个简单的函数修饰器实例。随后这个修饰器被用于\codeff{claimDonations}上。这个函数在第10行向由函数参数传入的\codeff{usr}账户进行转账，本来直接使用函数传参用于转账操作是一种容易引发漏洞的高发行为，但是通过使用\codeff{onlyAdmin}修饰符，每次在执行这个函数之前都要检查函数的访问者是否为合约的管理者，有效地阻止了函数被攻击者恶意利用。
+
+\subsection{SS4：使用程序的执行锁防止重入}
+使用程序锁防止重入是一种比较巧妙的技术，通常开发者会设置一个互斥变量用作执行锁，在每次执行关键操作之前先检查执行锁的值，并修改执行锁的现有值，再进行正常的业务操作。这种防范方式会在攻击者第二次试图进入函数时挡住攻击者，因为执行锁的值已经在第一次运行时改变了，在第二次运行时无法通过执行锁值的检查，进而达到防止程序被重入的效果。在图\ref{fig:ss4_example}中，函数10行进行执行锁的检查，在第11行更改了锁的值，在更改执行锁的值之后再在第12行进行转账操作。如果有攻击者试图使用重入进行函数攻击，那么在第二次重入时，攻击者将无法通过程序执行锁的检查，也无法进行可重入攻击。因此，这个安全盾技术通过简单的代码即实现了对可重入攻击的防范。
+\begin{figure}
+\begin{minipage}[htbp]{1.0\linewidth}
+    \begin{lstlisting}
+    contract MicroDAO{
+        bool public executed = false;
+        ...
+        function execute() internal {
+            ...
+            executed=false;		
+        }
+        function executeSpendingRequests(address _addr, uint amount) public payable {
+            MicroDAO m =MicroDAO(allowances[_addr]);
+            if(!executed) {
+                m.execute();
+                _addr.transfer(amount);
+                ...
+            }
+        }
+    }
+    \end{lstlisting}
+%\caption{test}
+\end{minipage}
+\vspace{-5mm}
+\caption{SS4：使用程序的执行锁防止重入}
+\label{fig:ss4_example}
+\end{figure}
+
+\subsection{SS5：提前更新状态变量}
+这种防御手段主要是在转账之前更新状态变量（即转账金额），这样在进行重入时，状态变量已经发生了改变，攻击者无法通过状态变量的检查，进而达到防御可重入攻击的目的。如图\ref{fig:ss5_example}所示，图中代码在第6行进行转账操作，但在转账操作之前，第5行进行余额的检查，而余额时在第3行进行赋值的，被赋值为\codeff{balanceOf}数组中访问者的余额，在赋值完成之后，随即把数组中访问者的余额赋值为0，并马上进行转账操作。在经过这样的预先处理之后，攻击者在第二次重入时，数组中访问者的余额已经被赋值为0了，故攻击者无法通过第5行的余额检查。这个函数通过对余额的检查以及在转账之前进行状态变量的更新成功达到了防范可重入漏洞攻击的目的。
+\begin{figure}
+\begin{minipage}[htbp]{1.0\linewidth}
+    \begin{lstlisting}
+    function safeWithdrawlal() public companyCanBeFinished{
+        if (!fundingGoalReached){
+            uint amount = balanceOf[msg.sender];
+            balanceOf[msg.sender] = 0;
+            if (amount > 0){
+                msg.sender.send(amount);
+                FundTransfer(msg.sender, amount, false)
+            }
+            ...
+        }
+    }
+    \end{lstlisting}
+%\caption{test}
+\end{minipage}
+\vspace{-5mm}
+\caption{SS5：提前更新状态变量}
+\label{fig:ss5_example}
+\end{figure}
