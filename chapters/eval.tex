@@ -33,4 +33,78 @@
   \includegraphics[width=\linewidth]{figures/unique_tp.png}
   \caption{发现的真实漏洞数量统计，“Our Unique”表示只被我们发现的漏洞}\label{fig:unique_tp}
 \end{figure}
-如图所示，这个标准漏洞库包含了\textcolor{red}{Number}漏洞实例。在这之中，可重入漏洞和低级调用漏洞占了所有漏洞数量可观的比重，其他两个漏洞则较少。在实验完成之后并联系上漏洞关联软件的开发者后，我们会将部分漏洞在网站上进行公开。
+如图所示，这个标准漏洞库包含了\textcolor{red}{612}个漏洞实例。在这之中，可重入漏洞和低级调用漏洞占了所有漏洞数量可观的比重，其他两个漏洞则较少。在实验完成之后并联系上漏洞关联软件的开发者后，我们会将部分漏洞在网站上进行公开。
+
+\subsubsection{动态验证漏洞的真实性}
+
+为了验证我们在实验中检测到的漏洞的真实性，我们对漏洞实例进行了简单的随机采样，并试图在我们的本地环境进行漏洞的触发。特别地，我们针对每个漏洞签名采样2个漏洞进行测试，只选用两个漏洞是因为使用漏洞签名匹配的可疑代码大多相似，如果测试代码被成功出发，则这些相似的代码也能用类似的测试方式进行触发；还有个原因是每次测试所需要的测试用例都需要我们的领域专家进行独立设计，如果需要进行测试的实例太多，会有大量的时间消耗。测试的环境采用了\textsc{Remix}本地环境进行测试。至于如何使用自动化流程进行软件代码测试，或者如何保证测试的高效性和有效性，这些问题超出了本课题研究的范围，不作讨论。
+
+\subsection{RQ2：分析各检测系统的检测结果}
+
+在上一章第\ref{sec:detection_rules}节和第\ref{sec:ss}节中，我们讨论了漏洞签名的归纳总结过程和9中安全盾技术的特点。为了分析这些漏洞签名和安全盾的有效性，我们将17770个未使用的智能合约软件用作测试集，在测试集上使用各种前沿工具以及我们的检测系统进行实验，最后比对检测结果。在统计时，我们将每个工具报告的漏洞都经过了人工专家的审计，这使得我们认为的漏洞代码数据是具备一定可信度的。各个工具在各个漏洞上的检测准确率如表\ref{tab:eval_reentrancy}、\ref{tab:eval_revert}、\ref{tab:eval_llc}、\ref{tab:eval_selfdestruct}所示。
+
+\begin{table}[htbp]
+  \centering
+  \begin{minipage}[t]{0.48\textwidth}
+  \caption{可重入漏洞检测结果}
+    \begin{tabular}{cccc}
+    \toprule
+    Tools & \#N & P\% & R\% \\
+    \midrule
+    Slither v0.6.4 & 79    & 18.98\%     & 3 \\
+    Oyente v0.2.0 & 19  & 10.53\%     & 3 \\
+    Smartcheck v0.2.0 & $\times$     & $\times$  & $\times$  \\
+    Securify v0.1.0 &  261    & 4.59\%  & 3 \\
+    Athena & 58   & 27.59\%     & 3 \\
+    \bottomrule
+    \end{tabular}%
+  \label{tab:eval_reentrancy}%
+  \end{minipage}
+  \begin{minipage}[t]{0.48\textwidth}
+    \caption{意外异常漏洞检测结果}
+    \begin{tabular}{cccc}
+    \toprule
+    Tools & \#N & P\% & R\% \\
+    \midrule
+    Slither v0.6.4 & 137  & 10.95\%   & 3 \\
+    Oyente v0.2.0 & $\times$ & $\times$  & $\times$ \\
+    Smartcheck v0.2.0 & 29  & 65.52\%   & 3 \\
+    Securify v0.1.0 & $\times$  & $\times$  & $\times$ \\
+    Athena & 43   & 79.07\%     & 3 \\
+    \bottomrule
+    \end{tabular}%
+  \label{tab:eval_revert}%
+  \end{minipage}
+  \begin{minipage}[t]{0.48\textwidth}
+    \caption{低级调用漏洞检测结果}
+    \begin{tabular}{cccc}
+    \toprule
+    Tools & \#N & P\% & R\% \\
+    \midrule
+    Slither v0.6.4 & 18   & 100.00\%     & 3 \\
+    Oyente v0.2.0 & $\times$ & $\times$ & $\times$ \\
+    Smartcheck v0.2.0 & 91     & 45.05\%     & 3 \\
+    Securify v0.1.0 & $\times$ & $\times$ & $\times$ \\
+    Athena &  38  & 89.47\%    & 3 \\
+    \bottomrule
+    \end{tabular}%
+  \label{tab:eval_llc}%
+  \end{minipage}
+  \begin{minipage}[t]{0.48\textwidth}
+    \caption{自毁漏洞检测结果}
+    \begin{tabular}{cccc}
+    \toprule
+    Tools & \#N & P\% & R\% \\
+    \midrule
+    Slither v0.6.4 & 10    & 20.00\%    & 3 \\
+    Oyente v0.2.0 & $\times$ & $\times$ & $\times$ \\
+    Smartcheck v0.2.0 & $\times$ & $\times$ & $\times$ \\
+    Securify v0.1.0 & $\times$  & $\times$ & $\times$ \\
+    Athena & 30    & 20.00\%     & 3 \\
+    \bottomrule
+    \end{tabular}%
+  \label{tab:eval_selfdestruct}%
+  \end{minipage}
+\end{table}%
+
+
