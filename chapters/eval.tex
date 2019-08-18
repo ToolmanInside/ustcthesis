@@ -100,11 +100,60 @@
     Oyente  & $\times$ & $\times$ & $\times$ \\
     Smartcheck  & $\times$ & $\times$ & $\times$ \\
     Securify & $\times$  & $\times$ & $\times$ \\
-    Athena & 30    & 20.00\%     & 100.0\% \\
+    Athena & 30    & 23.33\%     & 100.0\% \\
     \bottomrule
     \end{tabular}%
   \label{tab:eval_selfdestruct}%
   \end{minipage}
+    \label{tab:eval_all}
 \end{table}%
 
+表中的"\#N"表示工具报告漏洞的数量，"P\%"和"R\%"分别表示了精确率和覆盖率，其中精确率的计算方式为(该工具报告的TP数)/\#N，覆盖率的计算方式为(该工具报告的TP数)/(所有工具的TP集合) 。下面我们将对表格中数据做简单的总结，并对数据背后的原因做简单分析。
 
+\paragraph{Athena产生误报的原因}
+
+在表\ref{tab:eval_reentrancy}、\ref{tab:eval_revert}、\ref{tab:eval_llc}、\ref{tab:eval_selfdestruct}中，我们列举了91个由\textsc{Athena}找到的漏洞，不考虑漏洞的类型，\textsc{Athena}有着53.84\%的总体精确率。相比之下，\textsc{Slither}具有着20.49\%的总体精确率，\textsc{Oyente}有着10.53\%的总体精确率，\textsc{Smartcheck}具有着40.59\%的总体精确率， \textsc{Securify}有着4.59\%的总体精确率。以上的精确率是建立在第\ref{sec:detection_rules}节中引入的漏洞签名和在第\ref{sec:ss}中引入的安全盾技术的基础上进行统计和整理的。
+
+\subparagraph{可重入漏洞误报的原因}
+
+在四个支持检测可重入漏洞的工具中，\textsc{Athena}有着最低的误报率（准确率27.53\%），这是因为我们采用了SS1-5的安全盾技术，针对可重入漏洞的检测做出改进，有效降低了在可重入漏洞上的误报率。其他工具的误报率都要高于甚至显著高于我们的系统。例如，\textsc{Securify}的误报率高达95.41\%，这是因为它的检测规则过于宽泛和简单，而且没有考虑代码中的安全盾技术。\textsc{Slither}的检测规则比较严谨和规范，但是它同样不考虑安全盾技术，这导致它虽然有着可接受的覆盖率40.54\%，准确率却比较低18.98\%。\textsc{Oyente}同样没考虑安全盾技术的存在，由于它的规则过于严格，它的覆盖率5.40\%较低，但准确率10.53\%较高。
+
+\subparagraph{意外异常漏洞误报的原因}
+
+正如在第\ref{sec:detection_rules}节归纳的一样，Slither将在循环结构中的所有调用都判作漏洞，这导致了它122个误报。Smartcheck在检测时考虑了SS6\ref{sec:ss6}但是没有考虑SS7\ref{sec:ss7}。相比之下，\textsc{Athena}考虑了SS6与SS7，这使得我们的系统产生的误报数量更少。
+
+\subparagraph{低级调用漏洞误报的原因}
+
+Slither在这个漏洞上的精确度表现很好，没有一个误报，这是因为它严格地检查了三种低级调用，\codeff{call}、\codeff{delegatecall}、\codeff{send}的使用。Smartcheck没有考虑SS8\ref{sec:ss8}，因此报告了很多高级调用，导致了50个误报。Athena有4个误报，这几个误报的原因是因为在函数中这些低级调用的返回值在其他语句受到了检查，而不是直接低级调用写在一起。因此，这4个误报需要借助数据依赖分析去寻找它被检查的位置。
+
+\subparagraph{自毁漏洞误报的原因}
+
+在这个漏洞上Athena有24个误报，在观察误报的原因之后，我们发现这些误报的原因是出自于复杂的函数修饰器，这些函数修饰器将身份检查功能隐藏于调用链中，无法直接准确分析。Slither有着接近的精确率，并报告了8个FP。
+
+\subparagraph{小结}
+
+我们总结的安全盾技术能在多数类型的漏洞中减少误报的数量。可是，SS3\ref{sec:ss3}、SS9\label{sec:ss9}这两种安全盾的总结还不够令人满意，在遇到复杂的用户自定义函数修饰器或者是许多本地变量的使用时的表现不尽人意。要解决以上问题，必须进一步地采用数据依赖分析技术进行辅助。
+
+\paragraph{Athena具有高覆盖率的原因}
+
+在表\ref{tab:eval_reentrancy}、\ref{tab:eval_revert}、\ref{tab:eval_llc}、\ref{tab:eval_selfdestruct}中，Athena具有着最好的覆盖率表现，在四种漏洞上的表现都要好于或者远好于其他工具。
+
+\subparagraph{可重入漏洞真实漏洞的分布}
+
+Athena找到了13个其他工具都没有发现的漏洞，我们观察这13个漏洞之后认为，其他的三个工具都没能考虑用户自定义的\codeff{transfer}函数，只考虑了Solidity内建的\codeff{transfer}函数。另外，Athena漏掉了34个真实漏洞，很显然这是因为可重入漏洞的复杂超过我们的预计，我们的漏洞签名仍然没能充分包括这部分真实漏洞。
+
+\subparagraph{意外异常真实漏洞的分布}
+
+对于这个漏洞类型，共有5个真实漏洞是只被一种工具唯一发现的，其中有2个是被Athena发现的。有趣的是，大部分的该类型的真实漏洞是被至少两种工具发现的——这说明其他工具的检测规则和我们的漏洞签名相似。其他3个只被一种工具唯一发现的漏洞没有在Athena的报告范围内，这是因为这些代码使用\codeff{assert}检查循环结构中的\codeff{transfer}语句，这也会造成意外异常漏洞，且不在我们漏洞签名的考虑范围内。
+
+\subparagraph{低级调用真实漏洞的分布}
+
+在18个只被一种工具唯一发现的真实漏洞中，Athena发现了10个，这10个里低级调用被\codeff{if}的条件语句使用，但是没有在\codeff{if}语句中进行检查，因此不会被报告为真实漏洞。Athena漏洞签名去尽可能匹配疑似漏洞的数据集。可是，仍有8个漏洞被Athena漏掉了。在观察这8个漏洞之后，我们发现这8个漏洞的低级调用的返回值赋值给了别的变量，对于变量的检查在后面的语句中产生，这是种非直接检查的低级调用。由于我们并没有在系统中加入数据依赖分析，Athena没能将这类代码报告为漏洞。Slither、Smartcheck将这8个报告为漏洞的原因是因为这些低级调用存在于\codeff{if}结构的条件语句内。
+
+\subparagraph{自毁漏洞真实漏洞的分布}
+
+对于这类漏洞，Athena报告了5个唯一发现的真实漏洞，并有着出众的覆盖率表现。我们自毁漏洞的漏洞签名较㢖，也考虑了用户自定义的函数修饰器，综合影响之下，覆盖率远好于Slither的28.57\%。同时，高覆盖率也带来了较低的准确率，Athena的准确率稍高于Slither。
+
+\subparagraph{小结}
+
+基于观察各前沿工具的实现原理和阅读大量代码得到的四种漏洞签名，只被Athena检测出的漏洞数要远高于其他工具检测出的数量。在检测低级调用漏洞时，Athena仍需要再加入准确的数据依赖分析，以提高系统的覆盖率表现。
