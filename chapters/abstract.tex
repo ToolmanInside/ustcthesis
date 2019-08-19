@@ -10,11 +10,19 @@
 为了有效改善现有的软件分析技术，在这篇工作中，我们提出结合传统静态分析技术与克隆分析技术。通过静态分析技术我们归纳总结了四种漏洞签名，再根据克隆分析技术去寻找漏洞，我们还在后面加入了九种安全盾技术以降低系统的误报数量。在整个系统中，由于标准漏洞库的缺乏，我们在部分环节加入了领域专家的审计以保证我们提出的漏洞库的公正性。最后，我们提出了基于软件分析的漏洞检测系统，Athena。
 
 经过我们大量的实验，我们明显地看出，Athena在这四种漏洞上有着不俗的表现，整体准确率和整体覆盖率都是最高的。至于系统的运行效率，Athena的运行速度和最快的工具仍有差距，但也在可接受的范围内。我们认为，我们提出的Athena系统，改进了现有的检测技术，达到了更好的检测效果，同时也拥有着不俗的运行效率。
-\keywords{以太坊；智能合约；软件分析技术；克隆检测技术；软件漏洞}
+\keywords{以太坊；智能合约；软件分析技术；软件漏洞}
 \end{abstract}
 
 \begin{enabstract}
+Blockchain, including Ethereum and smart contracts, are changing the daily life of people. This technique brings innovation to industries, such as decentralized banks, decentralized energy management systems etc. It brings great convenience in techniques, meanwhile it can cause devastating financial damages. In 2016, hackers launched a attack aiming at the DAO contract and cause millions of dollars losses. On the one hand, the blockchain technique inspires people to continuously innovate; on the other hand, the blockchain softwares, as an ordinary software, should be verified by software analysis techniques.
 
+Software analysis techniques, including static analysis, dynamic analysis and verifications, have various features. When facing problems, we must choose appropriate one. In this work, we use static analysis, with clone analysis to build a vulnerability detection system. Our work will improve the existing detection results and propose a benchmark for Solidity vulnerabilities, which will make up the need of the vulnerability database, and ease future works on Solidity softwares.
 
-  \enkeywords{PhD}
+We surveyed 4 smart contracts vulnerabilities, and introduces their features and their harm for softwares. We also surveyed the capability of cutting-edge tools, then we found that few tools can detect all types of vulnerabilities. What's more, we introduced the bytecode generation process.
+
+To effectively improve the existing software analysis technique, in this work, we propose combining static analysis with clone analysis. We summarized 4 types of vulnerability signatures, and match suspicious code by clone analysis. We appended our system with 9 Security Shield techniques to reduce false positive reports. As the fairness of our benchmark, our domain experts will audit the suspicious code twice. Finally, we propose our software analysis based detection, Athena.
+
+In our experiment, we find Athena has outstanding performance in both precision rate and recall rate. Considering the system efficiency, Athena still has gap with the fastest tool. However, it is proved Athena has better overall performance. 
+
+  \enkeywords{Ethereum;Smart Contract;Software Analysis;Vulnerability}
 \end{enabstract}
