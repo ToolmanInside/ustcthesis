@@ -4,6 +4,8 @@
 
 \section{智能合约中的常见漏洞}
 
+智能合约有数十种漏洞，这些漏洞可以按漏洞危害，分为不同的等级。具有较高危害的几种漏洞，应该引起我们足够的重视。在本文中，我们参考了\cite{zeus}、\cite{oyente}、\cite{slither}等文献，提出了以下四种高危漏洞：可重入漏洞、意外异常漏洞、低级调用漏洞和自毁漏洞。我们选择这几种漏洞作为讨论的对象是因为，这几种漏洞在智能合约软件开发中较为常见，容易触发，且造成巨大伤害，在\cite{zeus}、\cite{oyente}、\cite{slither}中都对这几种漏洞提出了分析。因此，我们也必须在本文中详细研究这几种漏洞。
+
 \subsection{可重入 (Reentrancy)漏洞}
 
 可重入漏洞是智能合约中最负盛名的漏洞。这个漏洞源于\emph{Solidity}语言上的一个特殊机制，像\emph{JavaScript}等语言一样，\emph{Solidity}语言有回调\codeff{fallback}函数。每个合约仅能有一个回调函数，并且这种函数没有参数，没有函数名，也不会返回任何的返回值。根据\emph{Solidity}的开发文档，这种函数只会在以下两种情况被触发：当合约收到函数调用但却没有符合的函数签名（函数的唯一标识符）时；当合约接收到任何数量的以太币，即发生交易时。前一种情况极少出现，而可重入攻击抓住的就是后面的那种情况。如果一个黑客妄图发动可重入攻击，他需要做的就是在自己的合约中编写一段恶意的回调函数，从而利用回调函数的特性反复记性转账操作，达到窃取以太币的目的。另一方面来说，如果被回调函数调用的函数中不包含转账语句，可重入漏洞也可利用重复调用，来造成拒绝服务（Denial of Service）攻击。因为在以太坊的体系中，每个合约都有一定的gas限制，gas会在合约的每一次调用、任何操作中消耗掉。如果重复调用一个函数，会不断消耗被调用函数所在合约的gas，待gas耗尽，合约不能提供任何的服务，也就达到了拒绝服务攻击的目的。在2016年，黑客借助可重入漏洞对DAO合约发动攻击，共盗取了价值数百万美元的以太币。
@@ -147,17 +149,17 @@
 \toprule
  Tool Name & Github Stars & Open Sourced & Method & Technique \\
  \midrule
- \textsc{Mythril} & 1177 & $\checkmark$ & Dynamic & Constraint Solving \\
- \textsc{MythX} & n.a.& $\times$ & Dynamic & Constraint Solving    \\
- \textsc{Slither} & 247 & $\checkmark$ & Static & CFG Analysis   \\
- \textsc{Echidna} & 306 & $\checkmark$ & Dynamic & Fuzzy Testing  \\
- \textsc{Manticore} & 1546 & $\checkmark$ & Dynamic & Testing  \\
- \textsc{Oyente} & 663 & $\checkmark$ &  Static & Symbolic Analysis   \\
- \textsc{Securify} & 129 & $\checkmark$ &  Static & Datalog Analysis   \\
- \textsc{SmartCheck} & 47 & $\checkmark$ & Static & AST Analysis  \\
- \textsc{Octopus} & 153 & $\checkmark$ & Static & Reverse Analysis  \\
- \textsc{Zeus} & n.a. & $\times$ & Static & Formal Verification   \\
- \textsc{ContractFuzzer} & 34 & $\checkmark$ & Dynamic & Fuzzy Testing  \\
+ \textsc{Mythril}\cite{mythril} & 1177 & $\checkmark$ & Dynamic & Constraint Solving \\
+ \textsc{MythX}\cite{mythx} & n.a.& $\times$ & Dynamic & Constraint Solving    \\
+ \textsc{Slither}\cite{slither} & 247 & $\checkmark$ & Static & CFG Analysis   \\
+ \textsc{Echidna}\cite{echidna} & 306 & $\checkmark$ & Dynamic & Fuzzy Testing  \\
+ \textsc{Manticore}\cite{manticore} & 1546 & $\checkmark$ & Dynamic & Testing  \\
+ \textsc{Oyente}\cite{oyente} & 663 & $\checkmark$ &  Static & Symbolic Analysis   \\
+ \textsc{Securify}\cite{securify} & 129 & $\checkmark$ &  Static & Datalog Analysis   \\
+ \textsc{SmartCheck}\cite{smartcheck} & 47 & $\checkmark$ & Static & AST Analysis  \\
+ \textsc{Octopus}\cite{octopus} & 153 & $\checkmark$ & Static & Reverse Analysis  \\
+ \textsc{Zeus}\cite{zeus} & n.a. & $\times$ & Static & Formal Verification   \\
+ \textsc{ContractFuzzer}\cite{contractfuzzer} & 34 & $\checkmark$ & Dynamic & Fuzzy Testing  \\
  \bottomrule
 \end{tabular}
 \label{tab:all_tools}
