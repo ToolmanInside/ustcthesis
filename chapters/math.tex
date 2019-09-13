@@ -586,7 +586,7 @@ Solidity语言诞生之初带来的诸多低级调用函数被开发者们诟病
         }
     }
     \For { each vulnerable candidates $v \in V$} {
-        \For { each rule $r \in SecurityShields$} {
+        \For { each rule $r \in CPTs$} {
             $b \leftarrow Match(r, v)$ \\
             \uIf {$b == True$} {
                 $V \leftarrow V - v$ \\
