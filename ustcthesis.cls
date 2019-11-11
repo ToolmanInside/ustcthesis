@@ -46,7 +46,7 @@
 \DeclareOption{colorlogo}{\ustc@colorlogotrue}
 \DeclareOption{bwlogo}{\ustc@colorlogofalse}
 \DeclareOption{arabic}{\ustc@arabictrue}
-\PassOptionsToClass{openany}{ctexbook}
+\PassOptionsToClass{openright}{ctexbook}
 \DeclareOption*{\PassOptionsToClass{\CurrentOption}{ctexbook}}
 \ExecuteOptions{doctor,academic,chinese,print,colorlogo,super}
 \ProcessOptions\relax
@@ -382,7 +382,7 @@
   \newcommand\ustc@enthesisname{A dissertation for doctor's degree}
 \else
   \ifustc@master
-    \newcommand\ustc@thesisname{硕士学位论文}
+    \newcommand\ustc@thesisname{工程硕士学位论文}
     \newcommand\ustc@enthesisname{A dissertation for master's degree}
   \else
     \newcommand\ustc@thesisname{学士学位论文}
@@ -525,7 +525,7 @@
   本人声明所呈交的学位论文，是本人在导师指导下进行研究工作所取得的成果。%
   除已特别加以标注和致谢的地方外，论文中不包含任何他人已经发表或撰写过的%
   研究成果。%
-  与我一同工作的同志对本研究所做的贡献均已在论文中作了明确的说明。}
+  与本文一同工作的同志对本研究所做的贡献均已在论文中作了明确的说明。}
 \newcommand\ustc@authorization{%
   作为申请学位的条件之一，学位论文著作权拥有者授权\ustc@universityname{}拥有%
   学位论文的部分使用权，%
