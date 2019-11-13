@@ -132,7 +132,7 @@
 	]
 	\begin{equation} \label{rule:slither: reentrance}
 	\small
-	r(var_{global}) \wedge (operation_{sendeth}) \wedge r(var_{global}) \Rightarrow \text{\emph{Reentrancy}}
+	r(var_{global}) \wedge (operation_{sendeth}) \wedge w(var_{global}) \Rightarrow \text{\emph{Reentrancy}}
 	\end{equation}
 \end{mdframed}
 \textsc{Slither}在检测可重入漏洞时，会首先检查控制流图中的全局变量读操作，即$r(var_{global})$，这一步是因为全局变量在以太坊中有着重要的作用。由于以太坊的底层运行是基于操作栈实现的，全局变量在以太坊通常是以\codeff{public}类型修饰，作用域包括整个合约。因此，对于全局变量的操作容易带来安全隐患，而对全局变量的读取操作则是对全局变量修改的第一步。\textsc{Slither}重视对全局变量的敏感操作，因此会检查对全局变量的读取和写入操作。更进一步，为了保证检测规则的准确性，\textsc{Slither}优先检查涉及转账操作$operation_{sendeth}$的全局变量修改，因为在转账操作周围的全局变量读写操作通常会带来收到漏洞攻击危险。\textsc{Slither}在控制流图上进行分析，控制流图的每个块内部都是中间语言形式的代码语句，这种中间语言在源代码的基础上做了一定程度的抽象，有利于\textsc{Slither}无视无关代码进行准确的漏洞检测。
