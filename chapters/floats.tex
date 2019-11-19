@@ -8,7 +8,7 @@
 
 \subsection{可重入 (Reentrancy)漏洞}
 
-可重入漏洞是智能合约中最负盛名的漏洞。这个漏洞源于\emph{Solidity}语言上的一个特殊机制，像\emph{JavaScript}等语言一样，\emph{Solidity}语言有回调\codeff{fallback}函数。每个合约仅能有一个回调函数，并且这种函数没有参数，没有函数名，也不会返回任何的返回值。根据\emph{Solidity}的开发文档，这种函数只会在以下两种情况被触发：当合约收到函数调用但却没有符合的函数签名（函数的唯一标识符）时；当合约接收到任何数量的以太币，即发生交易时。前一种情况极少出现，而可重入攻击抓住的就是后面的那种情况。如果一个黑客妄图发动可重入攻击，他需要做的就是在自己的合约中编写一段恶意的回调函数，从而利用回调函数的特性反复记性转账操作，达到窃取以太币的目的。另一方面来说，如果被回调函数调用的函数中不包含转账语句，可重入漏洞也可利用重复调用，来造成拒绝服务（Denial of Service）攻击。因为在以太坊的体系中，每个合约都有一定的gas限制，gas会在合约的每一次调用、任何操作中消耗掉。如果重复调用一个函数，会不断消耗被调用函数所在合约的gas，待gas耗尽，合约不能提供任何的服务，也就达到了拒绝服务攻击的目的。在2016年，黑客借助可重入漏洞对DAO合约发动攻击，共盗取了价值数百万美元的以太币。
+可重入漏洞是智能合约中最负盛名的漏洞。这个漏洞源于\emph{Solidity}\cite{solidity-doc}语言上的一个特殊机制，像\emph{JavaScript}等语言一样，\emph{Solidity}语言有回调\codeff{fallback}函数。每个合约仅能有一个回调函数，并且这种函数没有参数，没有函数名，也不会返回任何的返回值。根据\emph{Solidity}的开发文档，这种函数只会在以下两种情况被触发：当合约收到函数调用但却没有符合的函数签名（函数的唯一标识符）时；当合约接收到任何数量的以太币，即发生交易时。前一种情况极少出现，而可重入攻击抓住的就是后面的那种情况。如果一个黑客妄图发动可重入攻击，他需要做的就是在自己的合约中编写一段恶意的回调函数，从而利用回调函数的特性反复记性转账操作，达到窃取以太币的目的。另一方面来说，如果被回调函数调用的函数中不包含转账语句，可重入漏洞也可利用重复调用，来造成拒绝服务（Denial of Service）攻击。因为在以太坊的体系中，每个合约都有一定的gas限制，gas会在合约的每一次调用、任何操作中消耗掉。如果重复调用一个函数，会不断消耗被调用函数所在合约的gas，待gas耗尽，合约不能提供任何的服务，也就达到了拒绝服务攻击的目的。在2016年，黑客借助可重入漏洞对DAO合约发动攻击，共盗取了价值数百万美元的以太币。
 
 可重入漏洞在智能合约的漏洞中算是比较灵活的漏洞，其发动攻击的方式灵活多变，目前主要的防范方式是对函数调用者的身份进行检验，新版的\emph{Solidity}编译器也对有可重入风险的函数做出了提醒，但是仍有很多已经部署在以太坊平台上的合约存在可重入的风险，因此本文很重视可重入漏洞攻击模式的的分析，并会在之后的技术开发阶段对这种漏洞进行针对性的改进。
 
@@ -82,7 +82,7 @@
   \label{fig:slither_proccess}
 \end{figure}
 
-以源代码作为输入，\textsc{Slither}首先借助\emph{Solidity}编译器将源代码经过编译，获取了程序的抽象语法树，再在AST上通过聚合、规则匹配的方式生成Slith中间语言（Intermediate Representation）和控制流图（Control Flow Graph）。由于\emph{Solidity}编译器生成了结构性强的抽象语法树（Abstract Syntax Tree），为分析提供了方便，故Slither能够在AST上如此顺利地实现IR和CFG的转换。其中，Slith IR是\textsc{Slither}的开发团队设计的一款中间语言，对源代码的常见操作做了不同程度的抽象。在以上所有步骤都完成之后，\textsc{Slither}再借助不同的探测器对生成的CFG进行探测。探测器中是\textsc{Slither}预先设定好的探测规则，如果在分析过程中发现和探测规则吻合的程序片段，探测器就会报告这个程序片段存在漏洞。故严格意义上来说，\textsc{Slither}是一款基于规则的漏洞检测软件。一方面来说，基于规则的设定提升了\textsc{Slither}的检测速度，也保证了它的可扩展性；另一方面，如果规则的制订不够合理，或者规则的分析程度不能做到抽象性和准确性的平衡，基于规则的检测方法就会带来很高的假正确率（False Positive Rate）。例如，\textsc{Slither}中针对可重入漏洞的检测规则如下图\ref{fig:slither_reentrancy_flow}所示：
+以源代码作为输入，\textsc{Slither}\cite{slither}首先借助\emph{Solidity}编译器将源代码经过编译，获取了程序的抽象语法树，再在AST上通过聚合、规则匹配的方式生成Slith中间语言（Intermediate Representation）和控制流图（Control Flow Graph）。由于\emph{Solidity}编译器生成了结构性强的抽象语法树（Abstract Syntax Tree），为分析提供了方便，故Slither能够在AST上如此顺利地实现IR和CFG的转换。其中，Slith IR是\textsc{Slither}的开发团队设计的一款中间语言，对源代码的常见操作做了不同程度的抽象。在以上所有步骤都完成之后，\textsc{Slither}再借助不同的探测器对生成的CFG进行探测。探测器中是\textsc{Slither}预先设定好的探测规则，如果在分析过程中发现和探测规则吻合的程序片段，探测器就会报告这个程序片段存在漏洞。故严格意义上来说，\textsc{Slither}是一款基于规则的漏洞检测软件。一方面来说，基于规则的设定提升了\textsc{Slither}的检测速度，也保证了它的可扩展性；另一方面，如果规则的制订不够合理，或者规则的分析程度不能做到抽象性和准确性的平衡，基于规则的检测方法就会带来很高的假正确率（False Positive Rate）。例如，\textsc{Slither}中针对可重入漏洞的检测规则如下图\ref{fig:slither_reentrancy_flow}所示：
 
 \begin{figure}
 \vspace{+2mm}
@@ -108,7 +108,7 @@
 
 \subsubsection{符号执行分析工具}
 
-符号执行分析工具主要将变量用符号进行标识，并利用约束求解器进行求解，来达到测试软件的墓地。符号执行工具没有像动态分析工具那样使用真实的用例观察软件的运行情况，而是利用约束求解技术或者其他技术代替真实值执行。在智能合约领域，代表的符号执行分析工具有\textsc{Oyente}，\textsc{Oyente}的分析过程如下图\ref{fig:oyente_process}所示：
+符号执行分析工具主要将变量用符号进行标识，并利用约束求解器进行求解，来达到测试软件的墓地。符号执行工具没有像动态分析工具那样使用真实的用例观察软件的运行情况，而是利用约束求解技术或者其他技术代替真实值执行。在智能合约领域，代表的符号执行分析工具有\textsc{Oyente}\cite{oyente}，\textsc{Oyente}的分析过程如下图\ref{fig:oyente_process}所示：
 
 \begin{figure}
 \vspace{+2mm}
@@ -123,19 +123,19 @@
 
 作为典型的符号执行分析工具，\textsc{Oyente}充分体现了他的特点，它在同样的数据集上花费了近十倍于\textsc{Slither}的分析时间，耗时较长。遗憾的是，\textsc{Oyente}的结果并不是很好，输出的结果有很高的假正确率，本文推测是由于规则设置的不合理导致的。但不可否认的是，\textsc{Oyente}作为静态分析工具，能够分析一些传统静态分析工具无法分析的漏洞，比如整数的上溢、下溢，栈溢出等等，这些漏洞无法通过传统分析方法得出。
 
-其他的分析工具如\textsc{Manticore}，也采用了符号执行分析技术，这种技术带来了更高的精确度的同时也容易引入更差的性能表现。
+其他的分析工具如\textsc{Manticore}\cite{manticore}，也采用了符号执行分析技术，这种技术带来了更高的精确度的同时也容易引入更差的性能表现。
 
 \subsection{动态分析工具}
 
 动态分析工具主要依赖于动态分析技术进行分析，这种技术使用测试用例作为输入，观察软件运行的状态（内存，耗时等等）和输出结果，进行分析并寻找程序漏洞。早期的动态分析技术多为黑盒测试，使用测试用例生成器不断产生测试用例，输入到软件中并观察结果。黑盒测试不依赖于软件本身的结构信息，只分析软件的运行状态及输入和输出之间的关系。早期的测试用例也是根据程序员本身的领域知识随机产生，由此也带来了测试用例测试效率低的问题——产生了大量的测试用例，却无法有效地测试到漏洞。为了解决以上问题，灰盒测试以及模糊测试诞生了。灰盒测试借助了静态分析技术来提高性能和表现，而模糊测试通过不同的标准来限制测试用例的数量，追求用最少的测试用例达到最高的测试效果。传统的模糊测试主要以程序的覆盖率作为标准，来引导整个测试过程，并采用了基于模型的或基于突变的测试用例生成器，解决了黑盒测试的主要问题，提高了测试效率。
 
-在\emph{Solidity}这门语言上，静态分析工具有一定的局限性。例如，对于复杂的控制流关系，静态分析技术无法保证漏洞的触发问题，即虽然静态技术能保证很高的路径覆盖率，却不能保证检测到的漏洞能触发。\emph{Solidity}语言实现的智能合约，多数功能简单，控制流图相比传统的Linux软件要小很多，但即使在这样的软件上，静态分析也不能打到完美的效果。为此，在某些场景下，需要结合动态分析技术进行分析。当下前沿的动态分析工具有\textsc{ContractFuzzer}，\textsc{ContractFuzzer}对\emph{Solidity}字节码进行测试，以函数的覆盖率为引导生成测试用例，并修改了底层EVM虚拟机以提供更多信息，综合以上信息进行漏洞的分析。虽然以函数的覆盖率为引导的测试在智能合约软件上可能效果不太好，但是不可否认\textsc{ContractFuzzer}迈出了重要的一步。同样的模糊测试工具还有\textsc{Echidna}，它是基于Haskell进行开发的，提供对\emph{Solidity}函数的测试功能。但\textsc{Echidna}需要手工对\emph{Solidity}的函数进行打桩，这意味着它的扩展性有限，在面对大数据集时可能会耗费大量时间。
-
-\subsection{其他分析工具}
-
-还有其他类型的程序分析工具比如基于形式验证的工具。形式验证是一种高级的软件安全分析技术，它直接分析软件的形式化描述，而不是软件的源代码，并使用数学工具证明软件的安全。形式验证往往能保证较高的安全等级，在一些有很高安全等级需求的软件，如果空客公司的飞行管理软件，需要形式验证来保证软件的安全。
-
-在\emph{Solidity}上，有形式化验证的分析工具\textsc{Zeus}，但是\textsc{Zeus}的团队在投递论文之后并没有公开程序源代码，也没有试图将工具商业化，因此本文没办法观察\textsc{Zeus}的运行原理。
+在\emph{Solidity}这门语言上，静态分析工具有一定的局限性。例如，对于复杂的控制流关系，静态分析技术无法保证漏洞的触发问题，即虽然静态技术能保证很高的路径覆盖率，却不能保证检测到的漏洞能触发。\emph{Solidity}语言实现的智能合约，多数功能简单，控制流图相比传统的Linux软件要小很多，但即使在这样的软件上，静态分析也不能打到完美的效果。为此，在某些场景下，需要结合动态分析技术进行分析。当下前沿的动态分析工具有\textsc{ContractFuzzer}\cite{contractfuzzer}，\textsc{ContractFuzzer}对\emph{Solidity}字节码进行测试，以函数的覆盖率为引导生成测试用例，并修改了底层EVM虚拟机以提供更多信息，综合以上信息进行漏洞的分析。虽然以函数的覆盖率为引导的测试在智能合约软件上可能效果不太好，但是不可否认\textsc{ContractFuzzer}迈出了重要的一步。同样的模糊测试工具还有\textsc{Echidna}\cite{echidna}，它是基于Haskell进行开发的，提供对\emph{Solidity}函数的测试功能。但\textsc{Echidna}需要手工对\emph{Solidity}的函数进行打桩，这意味着它的扩展性有限，在面对大数据集时可能会耗费大量时间。
+%
+%\subsection{其他分析工具}
+%
+%还有其他类型的程序分析工具比如基于形式验证的工具。形式验证是一种高级的软件安全分析技术，它直接分析软件的形式化描述，而不是软件的源代码，并使用数学工具证明软件的安全。形式验证往往能保证较高的安全等级，在一些有很高安全等级需求的软件，如果空客公司的飞行管理软件，需要形式验证来保证软件的安全。
+%
+%在\emph{Solidity}上，有形式化验证的分析工具\textsc{Zeus}\cite{zeus}，但是\textsc{Zeus}的团队在投递论文之后并没有公开程序源代码，也没有试图将工具商业化，因此本文没办法观察\textsc{Zeus}的运行原理。
 
 \subsection{现有智能合约分析工具总结}
 
@@ -149,17 +149,17 @@
 \toprule
  Tool Name & Github Stars & Open Sourced & Method & Technique \\
  \midrule
- \textsc{Mythril} & 1177 & $\checkmark$ & Dynamic & Constraint Solving \\
- \textsc{MythX} & n.a.& $\times$ & Dynamic & Constraint Solving    \\
- \textsc{Slither} & 247 & $\checkmark$ & Static & CFG Analysis   \\
- \textsc{Echidna} & 306 & $\checkmark$ & Dynamic & Fuzzy Testing  \\
- \textsc{Manticore} & 1546 & $\checkmark$ & Dynamic & Testing  \\
- \textsc{Oyente} & 663 & $\checkmark$ &  Static & Symbolic Analysis   \\
- \textsc{Securify} & 129 & $\checkmark$ &  Static & Datalog Analysis   \\
- \textsc{SmartCheck} & 47 & $\checkmark$ & Static & AST Analysis  \\
- \textsc{Octopus} & 153 & $\checkmark$ & Static & Reverse Analysis  \\
- \textsc{Zeus} & n.a. & $\times$ & Static & Formal Verification   \\
- \textsc{ContractFuzzer} & 34 & $\checkmark$ & Dynamic & Fuzzy Testing  \\
+ \textsc{Mythril}\cite{mythril} & 1177 & $\checkmark$ & Dynamic & Constraint Solving \\
+ \textsc{MythX}\cite{mythx} & n.a.& $\times$ & Dynamic & Constraint Solving    \\
+ \textsc{Slither}\cite{slither} & 247 & $\checkmark$ & Static & CFG Analysis   \\
+ \textsc{Echidna}\cite{echidna} & 306 & $\checkmark$ & Dynamic & Fuzzy Testing  \\
+ \textsc{Manticore}\cite{manticore} & 1546 & $\checkmark$ & Dynamic & Testing  \\
+ \textsc{Oyente}\cite{oyente} & 663 & $\checkmark$ &  Static & Symbolic Analysis   \\
+ \textsc{Securify}\cite{securify} & 129 & $\checkmark$ &  Static & Datalog Analysis   \\
+ \textsc{SmartCheck}\cite{smartcheck} & 47 & $\checkmark$ & Static & AST Analysis  \\
+ \textsc{Octopus}\cite{octopus} & 153 & $\checkmark$ & Static & Reverse Analysis  \\
+ \textsc{Zeus}\cite{zeus} & n.a. & $\times$ & Static & Formal Verification   \\
+ \textsc{ContractFuzzer}\cite{contractfuzzer} & 34 & $\checkmark$ & Dynamic & Fuzzy Testing  \\
  \bottomrule
 \end{tabular}
 \label{tab:all_tools}
@@ -197,3 +197,6 @@
 运行时函数包括了源代码的主体部分，体量也比构造函数大不少。在运行时函数的开始部分，会先重置内存指针、支付检查，随后会将调用的函数名称传入函数选择器。函数选择器中存放了源代码中各个函数的函数签名，将传入的函数名称经过hash和函数签名进行比对，就可以得到各个函数在内存中的位置。在获取函数位置之后，并不能马上直接运行函数主体，EVM会先运行函数包装器（Function Wrapper）中的内容。包装器的主要功能包括保管函数入口地址、清理内存、接受函数返回值等等，它的存在保证了函数的正常稳定运行。在包装器准备好之后，才会进入函数的主体部分。主体部分包括了源代码中的绝大部分内容，故在反编译过程中，如果能跳过函数选择器和函数包装器，直接找到函数的主体部分，将会大大减少本文的分析代码量。
 
 此时汇编码还没有结束，在汇编码的最后部分是大量的无效代码，这部分的十六进制代码无法和对应表中的任何操作联系起来。事实上，这部分的代码并不是真的无效代码，这部分的代码称为元数据hash（Metadata Hash）。根据黄皮书介绍，每个合约部署在区块上时，会根据合约的信息（函数签名、构造器参数、函数数量等等）生成一个hash值，每个合约的hash值都是唯一的，这个hash值称之为元数据hash，放在运行时函数的最后部分，作为合约的指纹小心存放。在构造函数和运行时函数中并不会有任何的函数调用会涉及这一部分的代码，它们仅作为合约的唯一代码在部署时被使用。
+
+\section{本章小结}
+在本章中，本文介绍了本课题需要了解的相关背景知识。首先，针对智能合约中常见的四种漏洞做了简单介绍并举例；其次，对现有的分析工具进行了分类并介绍特点；最后，还介绍了智能合约字节码的相关知识。
